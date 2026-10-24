@@ -1,0 +1,1 @@
+import{m as e,p as t,s as n,u as r,w as i}from"./index-DBDuv9C5.js";var a={class:`text-center`},o={class:`text-[32px] font-bold leading-none tracking-tight`},s={class:`mt-1.5 text-[13px] text-white/40`},c=t({__name:`BalanceSummary`,props:{amount:{},label:{}},setup(t){return(c,l)=>(e(),r(`div`,a,[n(`p`,o,i(t.amount),1),n(`p`,s,i(t.label),1)]))}});export{c as t};
