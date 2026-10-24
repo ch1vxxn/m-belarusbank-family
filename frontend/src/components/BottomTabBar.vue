@@ -1,11 +1,4 @@
 <script setup lang="ts">
-/**
- * BottomTabBar — нижняя панель навигации приложения.
- *
- * 5 вкладок: Главная, Платежи, Журнал, Финансы, Ещё.
- * Иконки из lucide-vue-next, активная вкладка — зелёный акцент.
- */
-
 import { RouterLink, useRoute } from 'vue-router'
 import { Home, ArrowLeftRight, Clock, Wallet, MoreHorizontal } from 'lucide-vue-next'
 import type { Component } from 'vue'
@@ -32,9 +25,7 @@ function isActive(to: string): boolean {
 </script>
 
 <template>
-  <nav
-    class="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.06] bg-[#1a2a2a]/95 pb-[env(safe-area-inset-bottom,4px)] backdrop-blur"
-  >
+  <nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.06] bg-[#0A0A0A]/95 pb-[env(safe-area-inset-bottom,4px)] backdrop-blur">
     <div class="mx-auto flex max-w-[390px] items-stretch justify-around">
       <RouterLink
         v-for="item in items"

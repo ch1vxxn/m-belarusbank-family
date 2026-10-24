@@ -54,3 +54,13 @@ input[type='number'] {
 main {
   scroll-behavior: smooth;
 }
+
+/* Скрываем скроллбар, но оставляем возможность скроллить */
+::-webkit-scrollbar {
+  display: none; /* Для Chrome, Safari, Edge */
+}
+
+* {
+  -ms-overflow-style: none;  /* Для IE и Edge */
+  scrollbar-width: none;  /* Для Firefox */
+}
