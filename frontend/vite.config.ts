@@ -11,6 +11,7 @@ export default defineConfig({
     vueDevTools(),
     tailwindcss(),
   ],
+  base: '/m-belarusbank-family/',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
