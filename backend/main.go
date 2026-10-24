@@ -167,13 +167,26 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	}
 }
 
-// withCORS — middleware, разрешающий запросы с Vue-фронтенда (localhost:5173).
+// withCORS — middleware, разрешающий запросы с Vue-фронтенда.
+// Разрешены два источника: dev-сервер на localhost:5173
+// и телефон в локальной сети (npm run dev -- --host, LAN IP машины).
+// Новые источники добавляются в список ниже.
 func withCORS(next http.Handler) http.Handler {
+	allowedOrigins := map[string]bool{
+		"http://localhost:5173":     true,
+		"http://192.168.0.106:5173": true, // телефон в той же Wi-Fi сети
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		w.Header().Set("Access-Control-Max-Age", "86400")
+		origin := r.Header.Get("Origin")
+
+		// Отвечаем на preflight только для разрешённых источников.
+		if origin != "" && allowedOrigins[origin] {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("Access-Control-Max-Age", "86400")
+		}
 
 		// Браузер шлёт preflight OPTIONS перед POST с Content-Type: application/json —
 		// отвечаем 204, не доходя до бизнес-логики.
