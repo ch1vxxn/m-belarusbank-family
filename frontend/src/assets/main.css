@@ -1,1 +1,56 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+/* ─── Глобальные стили «М-Беларусбанк Family» ─── */
+
+/* Фон вокруг телефона на десктопе */
+html {
+  background-color: #0a0e14;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100dvh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.4;
+  color: #ffffff;
+  background-color: #0a0e14;
+}
+
+/* Убираем стрелочки в number input (они свои) */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* Стиль выделения */
+::selection {
+  background-color: rgba(0, 166, 81, 0.3);
+  color: #fff;
+}
+
+/* Скроллбар в тёмной теме */
+::-webkit-scrollbar {
+  width: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Переходы между экранами (простая анимация) */
+main {
+  scroll-behavior: smooth;
+}
