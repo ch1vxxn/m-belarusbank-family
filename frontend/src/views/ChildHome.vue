@@ -1,40 +1,14 @@
 <script setup lang="ts">
-<<<<<<< Updated upstream
-/**
- * ChildHome — экран 3: Детский интерфейс.
- *
- * Отдельный интерфейс для ребёнка: приветствие, баланс, карта,
- * цель накопления, задания с наградой, достижения.
- */
-
-=======
 import { ref, onMounted, nextTick } from 'vue'
->>>>>>> Stashed changes
 import { useRouter } from 'vue-router'
 import { useFamilyStore } from '@/stores/family'
-import {
-  ArrowLeft,
-  Bike,
-  PiggyBank,
-  Target,
-  ShieldCheck,
-  Circle,
-} from 'lucide-vue-next'
-import BankCard from '@/components/BankCard.vue'
-import BalanceSummary from '@/components/BalanceSummary.vue'
-import ChildAvatar from '@/components/ChildAvatar.vue'
-import GoalProgressBar from '@/components/GoalProgressBar.vue'
-import NoticeBanner from '@/components/NoticeBanner.vue'
+import { ChevronLeft, ArrowUpRight, ArrowDownLeft, Pause, Play, Bike } from 'lucide-vue-next'
 
 const router = useRouter()
 const family = useFamilyStore()
 
-<<<<<<< Updated upstream
-function goBack(): void {
-  router.push('/')
-=======
 // Состояние активной вкладки
-const activeTab = ref('operations') // 'operations', 'limits', 'savings', 'tasks'
+const activeTab = ref('operations')
 
 // Шторка перевода
 const isTransferModalOpen = ref(false)
@@ -43,18 +17,13 @@ const transferAmount = ref(10)
 const openTransferModal = () => {
   transferAmount.value = 10
   isTransferModalOpen.value = true
->>>>>>> Stashed changes
 }
 
-function openGoal(): void {
-  router.push('/goal')
+const executeTransfer = async () => {
+  family.transfer(transferAmount.value)
+  isTransferModalOpen.value = false
 }
 
-const achievementIcons: Record<string, typeof Target> = {
-  Target,
-  ShieldCheck,
-  PiggyBank,
-}
 // --- ЛОГИКА ПЕРЕЕЗЖАЮЩЕЙ ПЛАШКИ ---
 const tabRefs: Record<string, HTMLElement> = {}
 const activeTabStyle = ref({ left: 0, width: 0 })
@@ -72,7 +41,6 @@ const setActiveTab = (id: string) => {
   })
 }
 
-// При первом рендере ставим плашку на "Операции"
 onMounted(() => {
   setTimeout(() => {
     const el = tabRefs['operations']
@@ -87,34 +55,17 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6 px-4 pb-12 pt-4">
-    <!-- Кнопка назад -->
-    <button
-      type="button"
-      class="flex items-center gap-2 text-[13px] font-medium text-white/50 transition hover:text-white"
-      @click="goBack"
-    >
-      <ArrowLeft class="size-4" stroke-width="1.5" />
-      К родителю
-    </button>
+  <div class="min-h-screen bg-[#0A0A0A] text-white font-sans pb-24">
+    
+    <!-- Шапка -->
+    <header class="flex items-center justify-between px-5 pt-8 pb-4">
+      <button @click="router.push('/family')" class="text-white/80 hover:text-white">
+        <ChevronLeft class="w-7 h-7" stroke-width="1.5" />
+      </button>
+      <h1 class="text-[17px] font-semibold">Профиль Миши</h1>
+      <div class="w-7"></div>
+    </header>
 
-<<<<<<< Updated upstream
-    <!-- Notice -->
-    <NoticeBanner
-      v-if="family.notice"
-      :notice="family.notice"
-      @dismiss="family.clearNotice()"
-    />
-
-    <!-- Приветствие + аватар -->
-    <div class="flex items-center gap-4">
-      <ChildAvatar :initials="family.child.initials" :size="56" />
-      <div>
-        <p class="text-[22px] font-semibold leading-tight">
-          Привет, {{ family.child.name }}!
-        </p>
-        <p class="text-[13px] text-white/40">Сегодня отличный день</p>
-=======
     <main class="px-5 mt-2">
       <!-- КАСТОМНАЯ КАРТОЧКА С ТЕКСТУРОЙ СОТ -->
       <div class="relative overflow-hidden rounded-[22px] p-5 text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)] bg-gradient-to-br from-[#006837] via-[#00A651] to-[#005226] mb-6">
@@ -173,8 +124,8 @@ onMounted(() => {
       <!-- ЕДИНЫЙ КОНТЕЙНЕР С ТАБАМИ И КОНТЕНТОМ -->
       <div class="bg-[#1C1C1E] rounded-2xl p-4 shadow-sm">
         
-                <!-- Табы с переезжающим индикатором -->
-        <div class="relative flex bg-[#1C1C1E] p-1 rounded-xl mb-6 overflow-x-auto scrollbar-hide" ref="tabsContainer">
+        <!-- Табы с переезжающим индикатором -->
+        <div class="relative flex bg-[#1C1C1E] p-1 rounded-xl mb-6 overflow-x-auto scrollbar-hide">
           
           <!-- Зеленая плашка (переезжает) -->
           <div 
@@ -315,101 +266,11 @@ onMounted(() => {
         <button @click="executeTransfer" class="w-full bg-[#00A651] text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2">
           Перевести {{ transferAmount }} BYN
         </button>
->>>>>>> Stashed changes
       </div>
     </div>
-
-<<<<<<< Updated upstream
-    <!-- Баланс -->
-    <BalanceSummary :amount="family.cardBalanceFormatted" label="Мои деньги" />
-
-    <!-- Карта -->
-    <BankCard
-      :masked-number="family.card.maskedNumber"
-      :balance="family.cardBalanceFormatted"
-      :payment-system="family.card.paymentSystem"
-      :is-active="family.card.isActive"
-    />
-
-    <!-- Цель накопления -->
-    <div
-      class="cursor-pointer rounded-2xl bg-[#2C2C2E] p-4 transition active:scale-[0.98]"
-      @click="openGoal"
-    >
-      <div class="flex items-center gap-3 mb-4">
-        <div class="flex size-10 items-center justify-center rounded-xl bg-white/[0.06]">
-          <Bike class="size-5 text-[#00A651]" stroke-width="1.5" />
-        </div>
-        <div>
-          <p class="text-[15px] font-semibold">{{ family.savingsGoal.title }}</p>
-          <p class="text-[13px] text-white/40">Моя цель</p>
-        </div>
-      </div>
-      <GoalProgressBar
-        :current="family.savingsGoal.current"
-        :target="family.savingsGoal.target"
-      />
-    </div>
-
-    <!-- Задания -->
-    <section>
-      <h2 class="mb-3 text-[15px] font-semibold">
-        Задания · {{ family.completedChoreCount }}/{{ family.chores.length }}
-      </h2>
-      <div class="space-y-2">
-        <div
-          v-for="chore in family.chores"
-          :key="chore.id"
-          class="flex items-center gap-3 rounded-xl bg-[#2C2C2E] p-4 transition"
-          :class="chore.completed ? 'opacity-50' : 'cursor-pointer active:bg-[#333539]'"
-          @click="family.completeChore(chore.id)"
-        >
-          <div
-            class="flex size-5 shrink-0 items-center justify-center rounded-full border-2"
-            :class="chore.completed ? 'border-[#00A651] bg-[#00A651]' : 'border-white/15'"
-          >
-            <Circle v-if="chore.completed" class="size-2.5 text-white" fill="currentColor" />
-          </div>
-          <span class="flex-1 text-[15px]" :class="chore.completed ? 'line-through' : ''">
-            {{ chore.title }}
-          </span>
-          <span class="text-[13px] font-semibold text-[#00A651]">
-            +{{ chore.reward }} BYN
-          </span>
-        </div>
-      </div>
-    </section>
-
-    <!-- Достижения -->
-    <section>
-      <h2 class="mb-3 text-[15px] font-semibold">Достижения</h2>
-      <div class="flex gap-3">
-        <div
-          v-for="a in family.achievements"
-          :key="a.id"
-          class="flex flex-1 flex-col items-center gap-2 rounded-xl bg-[#2C2C2E] p-3 text-center"
-        >
-          <div
-            class="flex size-10 items-center justify-center rounded-full"
-            :style="{ backgroundColor: a.color + '18', color: a.color }"
-          >
-            <component
-              :is="achievementIcons[a.icon as keyof typeof achievementIcons] ?? Target"
-              class="size-5"
-              stroke-width="1.5"
-              v-if="a.icon in achievementIcons"
-            />
-            <span v-else class="text-lg">{{ a.icon }}</span>
-          </div>
-          <p class="text-[11px] font-medium leading-tight text-white/60">
-            {{ a.title }}
-          </p>
-        </div>
-      </div>
-    </section>
   </div>
 </template>
-=======
+
 <style scoped>
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -418,23 +279,4 @@ onMounted(() => {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
-
-/* Анимация переезжающей таблетки */
-.tab-pill-enter-active,
-.tab-pill-leave-active {
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-/* Новая таблетка появляется сзади */
-.tab-pill-enter-from {
-  opacity: 0;
-  transform: scale(0.8);
-}
-
-/* Старая таблетка исчезает сзади */
-.tab-pill-leave-to {
-  opacity: 0;
-  transform: scale(0.8);
-}
 </style>
->>>>>>> Stashed changes

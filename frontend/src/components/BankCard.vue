@@ -1,14 +1,4 @@
 <script setup lang="ts">
-<<<<<<< Updated upstream
-/**
- * BankCard — визуальное представление детской банковской карты.
- *
- * Тёмно-зелёный градиент, текстура (сетка точек), логотип VISA,
- * маскированный номер. Стиль строго в духе М-Беларусбанка.
- *
- * Используется на экранах: родительский кабинет, управление картой.
- */
-=======
 import { computed } from 'vue'
 
 defineProps<{
@@ -21,97 +11,62 @@ defineProps<{
   isBalanceHidden?: boolean
   isRefreshing?: boolean
 }>()
->>>>>>> Stashed changes
 
-defineProps<{
-  /** Маскированный номер, например «2200 •••• •••• 4567» */
-  maskedNumber: string
-  /** Баланс в BYN (уже отформатированный) */
-  balance: string
-  /** Платёжная система */
-  paymentSystem: 'VISA' | 'Mastercard'
-  /** Активна ли карта */
-  isActive: boolean
+const emit = defineEmits<{
+  'toggle-balance': []
+  'refresh': []
 }>()
 
 // Функция для получения текущего времени
 const currentTime = computed(() => {
   const now = new Date()
-  
-  // Форматируем дату: ДД.ММ.ГГГГ
   const day = String(now.getDate()).padStart(2, '0')
   const month = String(now.getMonth() + 1).padStart(2, '0')
   const year = now.getFullYear()
-  
-  // Форматируем время: ЧЧ:ММ
   const hours = String(now.getHours()).padStart(2, '0')
   const minutes = String(now.getMinutes()).padStart(2, '0')
-  
   return `на ${day}.${month}.${year} ${hours}:${minutes}`
 })
 </script>
 
 <template>
-  <div
-    class="relative overflow-hidden rounded-3xl p-5"
-    :class="
-      isActive
-        ? 'bg-gradient-to-br from-[#006837] via-[#008a42] to-[#005226]'
-        : 'bg-[#2C2C2E] opacity-60 grayscale'
-    "
-  >
-    <!-- Текстура: сетка точек (как на реальных картах) -->
-    <div
-      class="pointer-events-none absolute inset-0 opacity-[0.06]"
-      style="background-image: radial-gradient(circle, #fff 0.5px, transparent 0.5px); background-size: 8px 8px"
-    />
+  <article class="bank-card">
+    <!-- Текстура -->
+    <svg class="honey" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <pattern id="honey" width="34" height="58.8" patternUnits="userSpaceOnUse">
+          <path d="M17 2 L32 10.5 V27.5 L17 36 L2 27.5 V10.5 Z" fill="none" stroke="#7fd0c6" stroke-width="1.15" />
+          <path d="M34 31.4 L49 39.9 V56.9 L34 65.4 L19 56.9 V39.9 Z" fill="none" stroke="#7fd0c6" stroke-width="1.15" />
+        </pattern>
+        <linearGradient id="honeyFade" x1="0" y1="0" x2="1" y2="0.15">
+          <stop offset="0%" stop-color="white" stop-opacity="0" />
+          <stop offset="38%" stop-color="white" stop-opacity="0.08" />
+          <stop offset="68%" stop-color="white" stop-opacity="0.55" />
+          <stop offset="100%" stop-color="white" stop-opacity="0.95" />
+        </linearGradient>
+        <mask id="honeyMask">
+          <rect width="100%" height="100%" fill="url(#honeyFade)" />
+        </mask>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#honey)" mask="url(#honeyMask)" opacity="0.55" />
+    </svg>
 
-    <!-- Верхняя строка: лейбл + VISA -->
-    <div class="flex items-start justify-between">
-      <span class="text-[11px] font-medium uppercase tracking-wider text-white/50">
-        {{ isActive ? 'Детская карта' : 'Заблокировано' }}
-      </span>
-      <span
-        class="text-xs font-bold italic tracking-widest"
-        :class="isActive ? 'text-white/80' : 'text-white/40'"
-      >
-        {{ paymentSystem }}
-      </span>
-    </div>
+    <div class="glow" />
 
-<<<<<<< Updated upstream
-    <!-- Номер карты -->
-    <p class="mt-4 font-mono text-[17px] tracking-[0.15em]" :class="isActive ? 'text-white/90' : 'text-white/50'">
-      {{ maskedNumber }}
-    </p>
-
-    <!-- Баланс -->
-    <div class="mt-4 flex items-end justify-between">
-      <span class="text-[26px] font-bold leading-none tracking-tight" :class="isActive ? 'text-white' : 'text-white/50'">
-        {{ balance }}
-      </span>
-      <!-- Чип (декоративный) -->
-      <div class="flex size-7 items-center justify-center rounded-md bg-[#C4A265]/20">
-        <div class="size-4 rounded-[2px] border border-[#C4A265]/30" />
-      </div>
-    </div>
-  </div>
-</template>
-=======
     <div class="content">
       <div class="top">
         <div>
           <div class="name">{{ title || 'Карта 1' }}</div>
           <div class="tariff">{{ subtitle || 'Экономный по 22.11.2026' }}</div>
         </div>
-                <div class="icons">
+        <div class="icons">
           <!-- Иконка глаза -->
           <button @click="emit('toggle-balance')" class="opacity-80 hover:opacity-100 transition-opacity">
             <svg v-if="!isBalanceHidden" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.2 12S5.6 6.2 12 6.2 21.8 12 21.8 12 18.4 17.8 12 17.8 2.2 12 2.2 12Z" /><circle cx="12" cy="12" r="2.6" /></svg>
             <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
           </button>
           
-          <!-- Иконка обновления (добавили @click и уменьшили размер) -->
+          <!-- Иконка обновления -->
           <button @click="emit('refresh')" class="opacity-80 hover:opacity-100 transition-opacity" :disabled="isRefreshing">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :class="{ 'animate-spin': isRefreshing }">
               <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
@@ -160,4 +115,3 @@ const currentTime = computed(() => {
 .foot { align-items: flex-end; justify-content: flex-end; gap: 10px; margin-top: auto; padding-top: 16px; }
 .pan { text-align: right; font-size: 13.5px; font-weight: 500; line-height: 1.15; }
 </style>
->>>>>>> Stashed changes
