@@ -93,7 +93,7 @@ const showGrayBg = computed(() => {
 
       <!-- Контент -->
             <!-- Контент -->
-      <main class="flex-1 overflow-y-auto overflow-x-hidden relative z-10 pb-24">
+      <main class="flex-1 overflow-y-auto overflow-x-hidden relative z-10 pb-24" :class="{ 'overflow-hidden': family.isAnyModalOpen }">
         <RouterView v-slot="{ Component, route }">
           <!-- Убрали mode="out-in", добавили absolute, чтобы не было задержки -->
           <Transition :name="transitionName">

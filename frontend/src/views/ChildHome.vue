@@ -1,33 +1,28 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+/**
+ * ChildHome — профиль ребёнка (роут /child).
+ *
+ * Карта, кнопки «Перевести»/«Пауза», табы (Операции/Лимиты/Копилки/Задания),
+ * шторка перевода и шторка статистики трат.
+ */
 
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFamilyStore } from '@/stores/family'
-import { ChevronLeft, ArrowUpRight} from 'lucide-vue-next'
-
-import { watch } from 'vue' // Добавь в импорты
-
-
+import { ChevronLeft, ArrowUpRight } from 'lucide-vue-next'
+import ToggleListItem from '@/components/ToggleListItem.vue'
 
 const router = useRouter()
 const family = useFamilyStore()
 
 const activeTab = ref('operations')
 const isCardSelectOpen = ref(false)
-// Состояние шторки перевода
 const isTransferModalOpen = ref(false)
-const transferAmount = ref(10)
 const isStatsModalOpen = ref(false)
-const openTransferModal = () => {
-  transferAmount.value = 10
-  isTransferModalOpen.value = true
-}
 
-const executeTransfer = async () => {
-  family.transfer(transferAmount.value)
-  isTransferModalOpen.value = false
-}
+const transferAmount = ref(10)
 
+// ── Переезжающий индикатор табов ──
 const tabRefs: Record<string, HTMLElement> = {}
 const activeTabStyle = ref({ left: 0, width: 0 })
 
@@ -50,114 +45,206 @@ onMounted(() => {
   }, 50)
 })
 
+// ── Синхронизация блокировки фона ──
 watch([isTransferModalOpen, isStatsModalOpen], ([transfer, stats]) => {
-  // Если открыта хотя бы одна шторка — ставим true
   family.setModalState(transfer || stats)
+})
+
+// ── Перевод ──
+const openTransferModal = () => {
+  transferAmount.value = 10
+  isTransferModalOpen.value = true
+}
+
+const executeTransfer = () => {
+  const ok = family.transfer(transferAmount.value)
+  if (ok) {
+    isTransferModalOpen.value = false
+  } else {
+    family.setNotice('error', 'Недостаточно средств или неверная сумма')
+  }
+}
+
+// ── БАГ №16: статистика из реальных транзакций (убираем хардкод) ──
+const monthlyStats = computed(() => {
+  let expenses = 0
+  let topups = 0
+  for (const t of family.transactions) {
+    if (t.amount < 0) expenses += Math.abs(t.amount)
+    else topups += t.amount
+  }
+  return {
+    expenses,
+    topups,
+    expensesFormatted: expenses.toFixed(2).replace('.', ',') + ' BYN',
+    topupsFormatted: topups.toFixed(2).replace('.', ',') + ' BYN',
+  }
+})
+
+// Категории расходов для шторки статистики (считаем из транзакций)
+const categoriesStats = computed(() => {
+  const map: Record<string, { label: string; emoji: string; total: number; color: string }> = {
+    food: { label: 'Еда', emoji: '🍔', total: 0, color: '#F4A261' },
+    cafe: { label: 'Кафе', emoji: '☕', total: 0, color: '#E9C46A' },
+    transport: { label: 'Транспорт', emoji: '🚌', total: 0, color: '#3B3B98' },
+    entertainment: { label: 'Развлечения', emoji: '🎮', total: 0, color: '#E63946' },
+    clothes: { label: 'Одежда', emoji: '👕', total: 0, color: '#8E44AD' },
+  }
+  for (const t of family.transactions) {
+  const bucket = map[t.category]
+  if (t.amount < 0 && bucket) {
+    bucket.total += Math.abs(t.amount)
+    }
+  }
+  const total = Object.values(map).reduce((s, c) => s + c.total, 0) || 1
+  return Object.values(map)
+    .filter((c) => c.total > 0)
+    .map((c) => ({
+      ...c,
+      percent: Math.round((c.total / total) * 100),
+      formatted: c.total.toFixed(2).replace('.', ',') + ' BYN',
+    }))
 })
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#0A0A0A] text-white font-sans pb-24 transition-all duration-300" :class="{ 'h-screen overflow-hidden': isTransferModalOpen || isStatsModalOpen }">
+  <div
+    class="min-h-screen bg-[#0A0A0A] text-white font-sans pb-24 transition-all duration-300"
+    :class="{ 'h-screen overflow-hidden': isTransferModalOpen || isStatsModalOpen }"
+  >
     <header class="flex items-center justify-between px-5 pt-8 pb-4">
       <button @click="router.push('/family')" class="text-white/80 hover:text-white">
         <ChevronLeft class="w-7 h-7" stroke-width="1.5" />
       </button>
-      <h1 class="text-[17px] font-semibold">Профиль Миши</h1>
+      <h1 class="text-[17px] font-semibold">Профиль {{ family.child.name }}</h1>
       <div class="w-7"></div>
     </header>
 
     <main class="px-5 mt-2">
-      <!-- Карта (динамическая: зеленая или серая) -->
-      <div 
+      <!-- Карта -->
+      <div
         class="relative overflow-hidden rounded-[22px] p-5 text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)] mb-6 transition-all duration-500"
-        :class="family.card.isActive ? 'bg-gradient-to-br from-[#006837] via-[#00A651] to-[#005226]' : 'bg-[#2C2C2E] grayscale'"
+        :class="
+          family.card.isActive
+            ? 'bg-gradient-to-br from-[#006837] via-[#00A651] to-[#005226]'
+            : 'bg-[#2C2C2E] grayscale'
+        "
       >
         <div class="relative z-10">
           <div class="flex justify-between items-start mb-6">
             <p class="text-[13px] font-medium text-white/90">M-Belarusbank Family</p>
             <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path></svg>
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"
+                ></path>
+              </svg>
             </div>
           </div>
-          <h2 class="text-2xl font-bold mb-4">Миша</h2>
+          <h2 class="text-2xl font-bold mb-4">{{ family.child.name }}</h2>
           <div class="mb-6">
             <p class="text-[12px] text-white/70">На карте</p>
             <p class="text-3xl font-bold mt-0.5">{{ family.childBalanceFormatted }}</p>
           </div>
           <div class="flex justify-between items-end">
             <p class="text-[13px] text-white/80 font-mono">•• {{ family.card.maskedNumber.slice(-4) }}</p>
-            <p class="text-[11px] text-white/70">10 лет • 7–13 лет • уровень 2</p>
+            <p class="text-[11px] text-white/70">
+              {{ family.child.age }} лет • 7–13 лет • уровень 2
+            </p>
           </div>
         </div>
       </div>
 
       <!-- Кнопки -->
       <div class="flex gap-3 mb-6">
-        <button @click="openTransferModal" class="flex-[2] bg-[#00A651] text-white font-semibold py-3.5 rounded-xl shadow-md flex items-center justify-center gap-2 hover:bg-[#009448] transition-colors">
+        <button
+          @click="openTransferModal"
+          class="flex-[2] bg-[#00A651] text-white font-semibold py-3.5 rounded-xl shadow-md flex items-center justify-center gap-2 hover:bg-[#009448] transition-colors"
+        >
           <ArrowUpRight class="w-5 h-5" /> Перевести
         </button>
-        
-        <button 
-          @click="family.toggleCardActive()" 
+
+        <button
+          @click="family.toggleCardActive()"
           class="flex-1 bg-[#1C1C1E] text-white font-semibold py-3.5 rounded-xl shadow-sm flex items-center justify-center gap-2 border border-white/5 hover:bg-[#2C2C2E] transition-colors"
         >
-          <svg v-if="family.card.isActive" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-          <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <svg v-if="family.card.isActive" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+          </svg>
+          <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
           {{ family.card.isActive ? 'Пауза' : 'Включить' }}
         </button>
       </div>
 
       <!-- Табы -->
       <div class="relative flex bg-[#1C1C1E] p-1 rounded-xl mb-6 overflow-x-auto scrollbar-hide">
-        <div class="absolute top-1 bottom-1 bg-[#00A651] rounded-lg transition-all duration-300 ease-out z-0" :style="{ left: activeTabStyle.left + 'px', width: activeTabStyle.width + 'px' }"></div>
-        <button v-for="tab in [{ id: 'operations', label: 'Операции' }, { id: 'limits', label: 'Лимиты' }, { id: 'savings', label: 'Копилки' }, { id: 'tasks', label: 'Задания' }]" :key="tab.id" @click="setActiveTab(tab.id)" class="relative z-10 px-4 py-2 text-[13px] font-medium transition-colors duration-300 shrink-0" :class="activeTab === tab.id ? 'text-white' : 'text-white/60'" :ref="el => { if (el) tabRefs[tab.id] = el as HTMLElement }">
+        <div
+          class="absolute top-1 bottom-1 bg-[#00A651] rounded-lg transition-all duration-300 ease-out z-0"
+          :style="{ left: activeTabStyle.left + 'px', width: activeTabStyle.width + 'px' }"
+        ></div>
+        <button
+          v-for="tab in [
+            { id: 'operations', label: 'Операции' },
+            { id: 'limits', label: 'Лимиты' },
+            { id: 'savings', label: 'Копилки' },
+            { id: 'tasks', label: 'Задания' },
+          ]"
+          :key="tab.id"
+          @click="setActiveTab(tab.id)"
+          class="relative z-10 px-4 py-2 text-[13px] font-medium transition-colors duration-300 shrink-0"
+          :class="activeTab === tab.id ? 'text-white' : 'text-white/60'"
+          :ref="(el) => { if (el) tabRefs[tab.id] = el as HTMLElement }"
+        >
           {{ tab.label }}
         </button>
       </div>
 
       <!-- Контент вкладок -->
       <div class="bg-[#1C1C1E] rounded-2xl p-4 shadow-sm relative z-10">
-        
-                <!-- ОПЕРАЦИИ -->
+        <!-- ОПЕРАЦИИ -->
         <div v-if="activeTab === 'operations'" class="space-y-6">
-          
-          <!-- Блок Траты за октябрь (Клик открывает шторку) -->
-          <div @click="isStatsModalOpen = true" class="cursor-pointer bg-[#2C2C2E] rounded-2xl p-4 transition-transform active:scale-[0.98]">
+          <!-- Блок трат -->
+          <div
+            @click="isStatsModalOpen = true"
+            class="cursor-pointer bg-[#2C2C2E] rounded-2xl p-4 transition-transform active:scale-[0.98]"
+          >
             <div class="flex justify-between items-center mb-2">
               <h2 class="text-[15px] font-semibold text-white">Траты за октябрь</h2>
-              <span class="text-[13px] text-[#00A651]">Подробнее ></span>
+              <span class="text-[13px] text-[#00A651]">Подробнее &gt;</span>
             </div>
-            <p class="text-3xl font-bold text-white mb-1">63,10 BYN</p>
+            <p class="text-3xl font-bold text-white mb-1">{{ monthlyStats.expensesFormatted }}</p>
             <p class="text-[13px] text-white/50">Куда уходят деньги</p>
-            
-            <!-- Мини-карточки -->
+
             <div class="flex gap-3 mt-4">
               <div class="flex-1 bg-[#1C1C1E] rounded-xl p-3">
-                <p class="text-[16px] font-bold text-white">63,10 BYN</p>
+                <p class="text-[16px] font-bold text-white">{{ monthlyStats.expensesFormatted }}</p>
                 <p class="text-[12px] text-white/50">Расходы</p>
               </div>
               <div class="flex-1 bg-[#1C1C1E] rounded-xl p-3">
-                <p class="text-[16px] font-bold text-[#00A651]">73,00 BYN</p>
+                <p class="text-[16px] font-bold text-[#00A651]">{{ monthlyStats.topupsFormatted }}</p>
                 <p class="text-[12px] text-white/50">Пополнения</p>
               </div>
             </div>
           </div>
 
-          <!-- Список операций по датам -->
+          <!-- Список операций -->
           <div class="space-y-6">
-            <!-- Группировка по датам из стора -->
             <div v-for="group in family.transactionsGrouped" :key="group.date">
               <p class="text-[13px] font-medium text-white/50 mb-3">{{ group.date }}</p>
-              
+
               <div class="bg-[#2C2C2E] rounded-2xl flex flex-col">
-                <div 
-                  v-for="(tx, index) in group.items" 
-                  :key="tx.id" 
+                <div
+                  v-for="(tx, index) in group.items"
+                  :key="tx.id"
                   class="flex items-center justify-between p-4"
                   :class="{ 'border-t border-white/5': index > 0 }"
                 >
                   <div class="flex items-center gap-3">
-                    <!-- Иконка в зависимости от категории (упрощенно) -->
                     <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl bg-[#1C1C1E]">
                       <span v-if="tx.category === 'food'">🍔</span>
                       <span v-else-if="tx.category === 'cafe'">☕</span>
@@ -170,7 +257,10 @@ watch([isTransferModalOpen, isStatsModalOpen], ([transfer, stats]) => {
                       <p class="text-[12px] text-white/50">{{ tx.time }}</p>
                     </div>
                   </div>
-                  <p class="text-[15px] font-bold" :class="tx.amount > 0 ? 'text-[#00A651]' : 'text-white'">
+                  <p
+                    class="text-[15px] font-bold"
+                    :class="tx.amount > 0 ? 'text-[#00A651]' : 'text-white'"
+                  >
                     {{ tx.amount > 0 ? '+' : '' }}{{ tx.amount.toFixed(2) }} BYN
                   </p>
                 </div>
@@ -188,75 +278,104 @@ watch([isTransferModalOpen, isStatsModalOpen], ([transfer, stats]) => {
             </p>
           </div>
 
+          <!-- БАГ №15: ToggleListItem вместо инлайна -->
           <div>
             <p class="text-[15px] font-medium text-white mb-3">Можно ребёнку</p>
-            <div class="space-y-3">
-              <div class="flex items-center justify-between py-1">
-                <span class="text-[14px]" :class="family.permissions.qrPay ? 'text-white' : 'text-white/50'">Оплата по QR</span>
-                <div @click="family.togglePermission('qrPay')" class="w-10 h-5 rounded-md relative cursor-pointer transition-colors" :class="family.permissions.qrPay ? 'bg-[#00A651]' : 'bg-[#2C2C2E]'">
-                  <div class="w-4 h-4 bg-white rounded-sm absolute top-0.5 shadow-sm transition-all" :class="family.permissions.qrPay ? 'right-0.5' : 'left-0.5'"></div>
-                </div>
-              </div>
-              <div class="flex items-center justify-between py-1">
-                <span class="text-[14px]" :class="family.permissions.cardPay ? 'text-white' : 'text-white/50'">Покупки картой</span>
-                <div @click="family.togglePermission('cardPay')" class="w-10 h-5 rounded-md relative cursor-pointer transition-colors" :class="family.permissions.cardPay ? 'bg-[#00A651]' : 'bg-[#2C2C2E]'">
-                  <div class="w-4 h-4 bg-white rounded-sm absolute top-0.5 shadow-sm transition-all" :class="family.permissions.cardPay ? 'right-0.5' : 'left-0.5'"></div>
-                </div>
-              </div>
-              <div class="flex items-center justify-between py-1">
-                <span class="text-[14px]" :class="family.permissions.onlinePay ? 'text-white' : 'text-white/50'">Покупки онлайн</span>
-                <div @click="family.togglePermission('onlinePay')" class="w-10 h-5 rounded-md relative cursor-pointer transition-colors" :class="family.permissions.onlinePay ? 'bg-[#00A651]' : 'bg-[#2C2C2E]'">
-                  <div class="w-4 h-4 bg-white rounded-sm absolute top-0.5 shadow-sm transition-all" :class="family.permissions.onlinePay ? 'right-0.5' : 'left-0.5'"></div>
-                </div>
-              </div>
-              <div class="flex items-center justify-between py-1">
-                <span class="text-[14px]" :class="family.permissions.friendsTransfer ? 'text-white' : 'text-white/50'">Переводы друзьям</span>
-                <div @click="family.togglePermission('friendsTransfer')" class="w-10 h-5 rounded-md relative cursor-pointer transition-colors" :class="family.permissions.friendsTransfer ? 'bg-[#00A651]' : 'bg-[#2C2C2E]'">
-                  <div class="w-4 h-4 bg-white rounded-sm absolute top-0.5 shadow-sm transition-all" :class="family.permissions.friendsTransfer ? 'right-0.5' : 'left-0.5'"></div>
-                </div>
-              </div>
-              <div class="flex items-center justify-between py-1">
-                <span class="text-[14px]" :class="family.permissions.cashWithdrawal ? 'text-white' : 'text-white/50'">Снятие наличных</span>
-                <div @click="family.togglePermission('cashWithdrawal')" class="w-10 h-5 rounded-md relative cursor-pointer transition-colors" :class="family.permissions.cashWithdrawal ? 'bg-[#00A651]' : 'bg-[#2C2C2E]'">
-                  <div class="w-4 h-4 bg-white rounded-sm absolute top-0.5 shadow-sm transition-all" :class="family.permissions.cashWithdrawal ? 'right-0.5' : 'left-0.5'"></div>
-                </div>
-              </div>
+            <div class="space-y-1">
+              <ToggleListItem
+                label="Оплата по QR"
+                :model-value="family.permissions.qrPay"
+                @update:model-value="family.togglePermission('qrPay')"
+              />
+              <ToggleListItem
+                label="Покупки картой"
+                :model-value="family.permissions.cardPay"
+                @update:model-value="family.togglePermission('cardPay')"
+              />
+              <ToggleListItem
+                label="Покупки онлайн"
+                :model-value="family.permissions.onlinePay"
+                @update:model-value="family.togglePermission('onlinePay')"
+              />
+              <ToggleListItem
+                label="Переводы друзьям"
+                :model-value="family.permissions.friendsTransfer"
+                @update:model-value="family.togglePermission('friendsTransfer')"
+              />
+              <ToggleListItem
+                label="Снятие наличных"
+                :model-value="family.permissions.cashWithdrawal"
+                @update:model-value="family.togglePermission('cashWithdrawal')"
+              />
             </div>
           </div>
 
+          <!-- Лимиты и одобрение (степперы) -->
           <div>
             <p class="text-[15px] font-medium text-white mb-3">Лимиты и одобрение</p>
             <div class="space-y-3">
               <div class="flex justify-between items-center py-1">
                 <span class="text-[14px] text-white/70">На одну покупку</span>
                 <div class="flex items-center gap-2">
-                  <button @click="family.setPerPurchase(Math.max(0, family.limits.perPurchase - 1))" class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors">−</button>
-                  <span class="text-[14px] font-medium text-white w-20 text-center">{{ family.limits.perPurchase }},00 BYN</span>
-                  <button @click="family.setPerPurchase(family.limits.perPurchase + 1)" class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors">+</button>
+                  <button
+                    @click="family.setPerPurchase(Math.max(0, family.limits.perPurchase - 1))"
+                    class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
+                  >−</button>
+                  <span class="text-[14px] font-medium text-white w-20 text-center">
+                    {{ family.limits.perPurchase }},00 BYN
+                  </span>
+                  <button
+                    @click="family.setPerPurchase(family.limits.perPurchase + 1)"
+                    class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
+                  >+</button>
                 </div>
               </div>
               <div class="flex justify-between items-center py-1">
                 <span class="text-[14px] text-white/70">В день</span>
                 <div class="flex items-center gap-2">
-                  <button @click="family.setDailyLimit(Math.max(0, family.limits.dailyLimit - 1))" class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors">−</button>
-                  <span class="text-[14px] font-medium text-white w-20 text-center">{{ family.limits.dailyLimit }},00 BYN</span>
-                  <button @click="family.setDailyLimit(family.limits.dailyLimit + 1)" class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors">+</button>
+                  <button
+                    @click="family.setDailyLimit(Math.max(0, family.limits.dailyLimit - 1))"
+                    class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
+                  >−</button>
+                  <span class="text-[14px] font-medium text-white w-20 text-center">
+                    {{ family.limits.dailyLimit }},00 BYN
+                  </span>
+                  <button
+                    @click="family.setDailyLimit(family.limits.dailyLimit + 1)"
+                    class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
+                  >+</button>
                 </div>
               </div>
               <div class="flex justify-between items-center py-1">
                 <span class="text-[14px] text-white/70">В месяц</span>
                 <div class="flex items-center gap-2">
-                  <button @click="family.setMonthlyLimit(Math.max(0, family.limits.monthlyLimit - 1))" class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors">−</button>
-                  <span class="text-[14px] font-medium text-white w-20 text-center">{{ family.limits.monthlyLimit }},00 BYN</span>
-                  <button @click="family.setMonthlyLimit(family.limits.monthlyLimit + 1)" class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors">+</button>
+                  <button
+                    @click="family.setMonthlyLimit(Math.max(0, family.limits.monthlyLimit - 1))"
+                    class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
+                  >−</button>
+                  <span class="text-[14px] font-medium text-white w-20 text-center">
+                    {{ family.limits.monthlyLimit }},00 BYN
+                  </span>
+                  <button
+                    @click="family.setMonthlyLimit(family.limits.monthlyLimit + 1)"
+                    class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
+                  >+</button>
                 </div>
               </div>
               <div class="flex justify-between items-center py-1">
                 <span class="text-[14px] text-white/70">Спрашивать родителя от</span>
                 <div class="flex items-center gap-2">
-                  <button @click="family.setApprovalThreshold(Math.max(0, family.limits.approvalThreshold - 1))" class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors">−</button>
-                  <span class="text-[14px] font-medium text-white w-20 text-center">{{ family.limits.approvalThreshold }},00 BYN</span>
-                  <button @click="family.setApprovalThreshold(family.limits.approvalThreshold + 1)" class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors">+</button>
+                  <button
+                    @click="family.setApprovalThreshold(Math.max(0, family.limits.approvalThreshold - 1))"
+                    class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
+                  >−</button>
+                  <span class="text-[14px] font-medium text-white w-20 text-center">
+                    {{ family.limits.approvalThreshold }},00 BYN
+                  </span>
+                  <button
+                    @click="family.setApprovalThreshold(family.limits.approvalThreshold + 1)"
+                    class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
+                  >+</button>
                 </div>
               </div>
             </div>
@@ -267,14 +386,29 @@ watch([isTransferModalOpen, isStatsModalOpen], ([transfer, stats]) => {
             <p class="text-[15px] font-medium text-white mb-3">Карманные</p>
             <div class="flex justify-between items-center mb-2 py-1">
               <span class="text-[14px] text-white/70">Каждый понедельник</span>
-              <div @click="family.toggleAllowance()" class="w-10 h-5 rounded-md relative cursor-pointer transition-colors" :class="family.allowances.isActive ? 'bg-[#00A651]' : 'bg-[#2C2C2E]'">
-                <div class="w-4 h-4 bg-white rounded-sm absolute top-0.5 shadow-sm transition-all" :class="family.allowances.isActive ? 'right-0.5' : 'left-0.5'"></div>
+              <div
+                @click="family.toggleAllowance()"
+                class="w-10 h-5 rounded-md relative cursor-pointer transition-colors"
+                :class="family.allowances.isActive ? 'bg-[#00A651]' : 'bg-[#2C2C2E]'"
+              >
+                <div
+                  class="w-4 h-4 bg-white rounded-sm absolute top-0.5 shadow-sm transition-all"
+                  :class="family.allowances.isActive ? 'right-0.5' : 'left-0.5'"
+                ></div>
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <button @click="family.setAllowanceAmount(Math.max(0, family.allowances.amount - 1))" class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E]">−</button>
-              <p class="text-[16px] font-medium text-white w-20 text-center">{{ family.allowances.amount }},00 BYN</p>
-              <button @click="family.setAllowanceAmount(family.allowances.amount + 1)" class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E]">+</button>
+              <button
+                @click="family.setAllowanceAmount(Math.max(0, family.allowances.amount - 1))"
+                class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E]"
+              >−</button>
+              <p class="text-[16px] font-medium text-white w-20 text-center">
+                {{ family.allowances.amount }},00 BYN
+              </p>
+              <button
+                @click="family.setAllowanceAmount(family.allowances.amount + 1)"
+                class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E]"
+              >+</button>
             </div>
           </div>
 
@@ -283,18 +417,26 @@ watch([isTransferModalOpen, isStatsModalOpen], ([transfer, stats]) => {
             <p class="text-[15px] font-medium text-white mb-3">Категории</p>
             <div class="mb-4 bg-[#2C2C2E] p-3 rounded-lg border border-white/5">
               <p class="text-[13px] text-red-400 flex items-center gap-2 mb-1 font-medium">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  ></path>
+                </svg>
                 Азартные игры, 18+, алкоголь и табак
               </p>
               <p class="text-[11px] text-white/40">Эти запреты установлены банком и не отключаются.</p>
             </div>
-            <div class="space-y-3">
-              <div v-for="cat in family.spendingCategories" :key="cat.id" class="flex items-center justify-between py-1">
-                <span class="text-[14px]" :class="cat.isAllowed ? 'text-white' : 'text-white/50'">{{ cat.label }}</span>
-                <div @click="family.toggleSpendingCategory(cat.id)" class="w-10 h-5 rounded-md relative cursor-pointer transition-colors" :class="cat.isAllowed ? 'bg-[#00A651]' : 'bg-[#2C2C2E]'">
-                  <div class="w-4 h-4 bg-white rounded-sm absolute top-0.5 shadow-sm transition-all" :class="cat.isAllowed ? 'right-0.5' : 'left-0.5'"></div>
-                </div>
-              </div>
+            <div class="space-y-1">
+              <ToggleListItem
+                v-for="cat in family.spendingCategories"
+                :key="cat.id"
+                :label="cat.label"
+                :model-value="cat.isAllowed"
+                @update:model-value="family.toggleSpendingCategory(cat.id)"
+              />
             </div>
           </div>
         </div>
@@ -305,109 +447,105 @@ watch([isTransferModalOpen, isStatsModalOpen], ([transfer, stats]) => {
             <div class="w-12 h-12 bg-[#00A651]/10 rounded-full flex items-center justify-center text-2xl">🚲</div>
             <div>
               <p class="text-[15px] font-semibold">{{ family.savingsGoal.title }}</p>
-              <p class="text-[13px] text-white/50">{{ family.savingsGoal.current }} / {{ family.savingsGoal.target }} BYN</p>
+              <p class="text-[13px] text-white/50">
+                {{ family.savingsGoal.current }} / {{ family.savingsGoal.target }} BYN
+              </p>
             </div>
           </div>
           <div class="w-full bg-white/10 rounded-full h-2.5">
-            <div class="bg-[#00A651] h-2.5 rounded-full" :style="{ width: family.goalProgress + '%' }"></div>
+            <div
+              class="bg-[#00A651] h-2.5 rounded-full"
+              :style="{ width: family.goalProgress + '%' }"
+            ></div>
           </div>
-          <button @click="router.push('/goal')" class="w-full mt-2 bg-[#2C2C2E] text-white py-3 rounded-xl font-medium text-[14px]">
+          <button
+            @click="router.push('/goal')"
+            class="w-full mt-2 bg-[#2C2C2E] text-white py-3 rounded-xl font-medium text-[14px]"
+          >
             Перейти к копилке
           </button>
         </div>
 
         <!-- ЗАДАНИЯ -->
         <div v-if="activeTab === 'tasks'" class="space-y-3">
-          <div v-for="chore in family.chores" :key="chore.id" class="flex items-center justify-between bg-[#2C2C2E] p-3 rounded-xl">
-            <span class="text-[14px]" :class="chore.completed ? 'line-through text-white/50' : ''">{{ chore.title }}</span>
+          <div
+            v-for="chore in family.chores"
+            :key="chore.id"
+            class="flex items-center justify-between bg-[#2C2C2E] p-3 rounded-xl"
+          >
+            <span class="text-[14px]" :class="chore.completed ? 'line-through text-white/50' : ''">
+              {{ chore.title }}
+            </span>
             <span class="text-[13px] font-semibold text-[#00A651]">+{{ chore.reward }} BYN</span>
           </div>
         </div>
-
       </div>
     </main>
 
-        <!-- ШТОРКА СТАТИСТИКИ -->
+    <!-- ШТОРКА СТАТИСТИКИ -->
     <Transition name="slide-up">
-      <div v-if="isStatsModalOpen" class="fixed inset-0 z-50 bg-black/60 flex items-end justify-center" @click.self="isStatsModalOpen = false">
+      <div
+        v-if="isStatsModalOpen"
+        class="fixed inset-0 z-50 bg-black/60 flex items-end justify-center"
+        @click.self="isStatsModalOpen = false"
+      >
         <div class="bg-[#1C1C1E] w-full max-w-[390px] rounded-t-[32px] p-6 pb-[calc(env(safe-area-inset-bottom)+24px)] max-h-[90dvh] overflow-y-auto scrollbar-hide">
-          
           <div class="flex justify-between items-center mb-6">
             <h3 class="text-lg font-bold text-white">Траты по категориям</h3>
-            <button @click="isStatsModalOpen = false" class="text-[#00A651] font-medium text-sm">Готово</button>
+            <button @click="isStatsModalOpen = false" class="text-[#00A651] font-medium text-sm">
+              Готово
+            </button>
           </div>
 
-          <!-- Общая сумма -->
           <div class="text-center mb-8">
-            <p class="text-4xl font-extrabold text-white">63,10 BYN</p>
+            <p class="text-4xl font-extrabold text-white">{{ monthlyStats.expensesFormatted }}</p>
             <p class="text-[13px] text-white/50 mt-1">Расходы за месяц</p>
           </div>
 
-          <!-- Список категорий (вместо круглой диаграммы) -->
           <div class="space-y-4">
-            <!-- Примеры категорий -->
-            <div class="flex items-center justify-between">
+            <div
+              v-for="cat in categoriesStats"
+              :key="cat.label"
+              class="flex items-center justify-between"
+            >
               <div class="flex items-center gap-3">
-                <span class="text-xl">📚</span>
-                <span class="text-[14px] text-white">Книги и учёба</span>
+                <span class="text-xl">{{ cat.emoji }}</span>
+                <span class="text-[14px] text-white">{{ cat.label }}</span>
               </div>
               <div class="flex items-center gap-3">
                 <div class="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div class="h-full bg-[#3B3B98]" style="width: 80%"></div>
+                  <div
+                    class="h-full"
+                    :style="{ width: cat.percent + '%', background: cat.color }"
+                  ></div>
                 </div>
-                <span class="text-[14px] font-bold text-white w-16 text-right">18,90 BYN</span>
+                <span class="text-[14px] font-bold text-white w-16 text-right">{{ cat.formatted }}</span>
               </div>
             </div>
 
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <span class="text-xl">🏃</span>
-                <span class="text-[14px] text-white">Спорт</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <div class="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div class="h-full bg-[#E63946]" style="width: 60%"></div>
-                </div>
-                <span class="text-[14px] font-bold text-white w-16 text-right">12,90 BYN</span>
-              </div>
-            </div>
-            
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <span class="text-xl">🍔</span>
-                <span class="text-[14px] text-white">Фастфуд</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <div class="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div class="h-full bg-[#F4A261]" style="width: 40%"></div>
-                </div>
-                <span class="text-[14px] font-bold text-white w-16 text-right">7,90 BYN</span>
-              </div>
-            </div>
+            <p v-if="categoriesStats.length === 0" class="text-center text-white/40 text-sm">
+              Расходов пока нет
+            </p>
           </div>
-
         </div>
       </div>
     </Transition>
 
-            <!-- ШТОРКА ПЕРЕВОДА -->
+    <!-- ШТОРКА ПЕРЕВОДА -->
     <Transition name="slide-up">
-      <!-- Обрати внимание: мы убрали flex-end и добавили justify-end + фиксированную высоту через dvh -->
-      <div 
-        v-if="isTransferModalOpen" 
+      <div
+        v-if="isTransferModalOpen"
         class="fixed inset-0 z-50 bg-black/60 flex flex-col justify-end"
-        style="height: 100dvh;"
+        style="height: 100dvh"
       >
-        
-        <!-- Контейнер шторки -->
         <div class="bg-[#1C1C1E] w-full rounded-t-[32px] p-6 pb-8 max-h-[90dvh] overflow-y-auto">
-          
-          <!-- Полоска для свайпа -->
           <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6"></div>
 
-          <!-- Шапка -->
           <div class="flex items-center justify-between mb-6">
-            <button @click="isTransferModalOpen = false" class="w-8 h-8 bg-[#2C2C2E] rounded-full flex items-center justify-center text-white/50 hover:text-white transition-colors">
+            <button
+              @click="isTransferModalOpen = false"
+              class="w-8 h-8 bg-[#2C2C2E] rounded-full flex items-center justify-center text-white/50 hover:text-white transition-colors"
+            >
               ✕
             </button>
             <h3 class="text-[17px] font-semibold text-white">Перевод ребёнку</h3>
@@ -416,14 +554,14 @@ watch([isTransferModalOpen, isStatsModalOpen], ([transfer, stats]) => {
 
           <!-- С какой карты -->
           <div class="relative mb-6">
-            <button 
+            <button
               @click="isCardSelectOpen = !isCardSelectOpen"
               class="w-full bg-[#2C2C2E] rounded-2xl p-4 flex justify-between items-center border border-white/5 hover:bg-[#3C3C3E] transition-colors"
             >
               <div class="flex flex-col items-start">
                 <span class="text-[11px] text-white/40 mb-0.5">С карты</span>
                 <span class="text-[15px] text-white font-medium">
-                  {{ family.cards[family.currentCardIndex]?.title || 'Карта 1' }} 
+                  {{ family.cards[family.currentCardIndex]?.title || 'Карта 1' }}
                   •• {{ family.cards[family.currentCardIndex]?.maskedNumber.slice(-4) || '9883' }}
                 </span>
               </div>
@@ -432,16 +570,20 @@ watch([isTransferModalOpen, isStatsModalOpen], ([transfer, stats]) => {
               </span>
             </button>
 
-            <!-- Выпадающий список карт -->
-            <div v-if="isCardSelectOpen" class="absolute bottom-full left-0 right-0 mb-2 bg-[#2C2C2E] rounded-xl shadow-xl z-50 overflow-hidden border border-white/5">
-              <button 
-                v-for="(card, index) in family.cards" 
+            <div
+              v-if="isCardSelectOpen"
+              class="absolute bottom-full left-0 right-0 mb-2 bg-[#2C2C2E] rounded-xl shadow-xl z-50 overflow-hidden border border-white/5"
+            >
+              <button
+                v-for="(card, index) in family.cards"
                 :key="card.id"
                 @click="family.setCurrentCardIndex(index); isCardSelectOpen = false"
                 class="w-full text-left p-4 hover:bg-[#3C3C3E] transition-colors border-b border-white/5 last:border-0 flex justify-between items-center"
               >
                 <div>
-                  <p class="text-[14px] text-white font-medium">{{ card.title }} •• {{ card.maskedNumber.slice(-4) }}</p>
+                  <p class="text-[14px] text-white font-medium">
+                    {{ card.title }} •• {{ card.maskedNumber.slice(-4) }}
+                  </p>
                   <p class="text-[12px] text-white/50">{{ card.balance.toFixed(2) }} BYN</p>
                 </div>
                 <span v-if="family.currentCardIndex === index" class="text-[#00A651]">✓</span>
@@ -450,22 +592,43 @@ watch([isTransferModalOpen, isStatsModalOpen], ([transfer, stats]) => {
           </div>
 
           <!-- Сумма -->
-          <p class="text-[14px] text-white/50 mb-2">Для Миши</p>
+          <p class="text-[14px] text-white/50 mb-2">Для {{ family.child.name }}</p>
           <div class="bg-[#2C2C2E] rounded-2xl p-4 flex justify-between items-center mb-4 border border-white/5">
-            <input v-model.number="transferAmount" type="number" class="bg-transparent text-3xl font-bold text-white w-full outline-none" />
+            <input
+              v-model.number="transferAmount"
+              type="number"
+              inputmode="numeric"
+              class="bg-transparent text-3xl font-bold text-white w-full outline-none"
+            />
             <span class="text-[16px] font-semibold text-white/40">BYN</span>
           </div>
-          
-          <!-- Быстрые кнопки -->
+
           <p class="text-[15px] text-white mb-3">Карманные</p>
           <div class="flex gap-2 mb-8">
-            <button @click="transferAmount = 10" class="px-4 py-2 bg-[#00A651]/20 text-[#00A651] rounded-full text-[13px] font-medium hover:bg-[#00A651]/30 transition-colors">На обед</button>
-            <button @click="transferAmount = 50" class="px-4 py-2 bg-[#00A651]/20 text-[#00A651] rounded-full text-[13px] font-medium hover:bg-[#00A651]/30 transition-colors">Карманные</button>
-            <button @click="transferAmount = 100" class="px-4 py-2 bg-[#00A651]/20 text-[#00A651] rounded-full text-[13px] font-medium hover:bg-[#00A651]/30 transition-colors">Молодец!</button>
+            <button
+              @click="transferAmount = 10"
+              class="px-4 py-2 bg-[#00A651]/20 text-[#00A651] rounded-full text-[13px] font-medium hover:bg-[#00A651]/30 transition-colors"
+            >
+              На обед
+            </button>
+            <button
+              @click="transferAmount = 50"
+              class="px-4 py-2 bg-[#00A651]/20 text-[#00A651] rounded-full text-[13px] font-medium hover:bg-[#00A651]/30 transition-colors"
+            >
+              Карманные
+            </button>
+            <button
+              @click="transferAmount = 100"
+              class="px-4 py-2 bg-[#00A651]/20 text-[#00A651] rounded-full text-[13px] font-medium hover:bg-[#00A651]/30 transition-colors"
+            >
+              Молодец!
+            </button>
           </div>
 
-          <!-- Кнопка отправить -->
-          <button @click="executeTransfer" class="w-full bg-[#00A651] text-white py-4 rounded-xl font-semibold text-[16px] shadow-lg shadow-[#00A651]/20 mb-2">
+          <button
+            @click="executeTransfer"
+            class="w-full bg-[#00A651] text-white py-4 rounded-xl font-semibold text-[16px] shadow-lg shadow-[#00A651]/20 mb-2"
+          >
             Перевести {{ transferAmount }} BYN
           </button>
         </div>
@@ -475,10 +638,14 @@ watch([isTransferModalOpen, isStatsModalOpen], ([transfer, stats]) => {
 </template>
 
 <style scoped>
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
-/* Анимация выезда шторки */
 .slide-up-enter-active,
 .slide-up-leave-active {
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -491,6 +658,4 @@ watch([isTransferModalOpen, isStatsModalOpen], ([transfer, stats]) => {
   opacity: 0;
   transform: translateY(100%);
 }
-
-
 </style>

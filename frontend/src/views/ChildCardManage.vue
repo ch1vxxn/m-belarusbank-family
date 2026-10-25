@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * ChildCardManage — экран 2: Управление детской картой.
+ * ChildCardManage — экран управления детской картой (роут /card).
  *
  * Полноразмерная карта, баланс, лимиты, разрешённые категории,
  * история операций с группировкой по датам, кнопка блокировки.
@@ -22,9 +22,19 @@ function goBack(): void {
   router.push('/')
 }
 
+/**
+ * Форматирует дату группы транзакций.
+ * Устойчиво к «Сегодня»/«Вчера» и к Invalid Date.
+ */
 function formatDate(dateStr: string): string {
+  if (dateStr === 'Сегодня' || dateStr === 'Вчера') return dateStr
   const d = new Date(dateStr)
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'short' })
+  if (Number.isNaN(d.getTime())) return dateStr
+  return d.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    weekday: 'short',
+  })
 }
 </script>
 
@@ -43,16 +53,13 @@ function formatDate(dateStr: string): string {
     <!-- Банковская карта (полная) -->
     <BankCard
       :masked-number="family.card.maskedNumber"
-      :balance="family.cardBalanceFormatted"
+      :balance="family.childBalanceFormatted"
       :payment-system="family.card.paymentSystem"
       :is-active="family.card.isActive"
     />
 
     <!-- Баланс -->
-    <BalanceSummary
-      :amount="family.cardBalanceFormatted"
-      label="Баланс детской карты"
-    />
+    <BalanceSummary :amount="family.childBalanceFormatted" label="Баланс детской карты" />
 
     <!-- Лимиты -->
     <div class="rounded-2xl bg-[#2C2C2E] p-4 space-y-5">
@@ -63,7 +70,7 @@ function formatDate(dateStr: string): string {
         @update:model-value="family.setDailyLimit($event)"
       />
       <LimitSelector
-        title="Недельный лимит"
+        title="Месячный лимит"
         :model-value="family.limits.monthlyLimit"
         @update:model-value="family.setMonthlyLimit($event)"
       />
