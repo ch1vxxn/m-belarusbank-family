@@ -35,19 +35,14 @@ input[type='number'] {
   color: #fff;
 }
 
-/* Скроллбар в тёмной теме */
+/* Убираем скроллбар на всех устройствах */
 ::-webkit-scrollbar {
-  width: 3px;
+  display: none;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+
+* {
+  -ms-overflow-style: none;  /* Для IE и Edge */
+  scrollbar-width: none;     /* Для Firefox */
 }
 
 /* Переходы между экранами (простая анимация) */

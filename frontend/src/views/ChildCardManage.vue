@@ -64,8 +64,8 @@ function formatDate(dateStr: string): string {
       />
       <LimitSelector
         title="Недельный лимит"
-        :model-value="family.limits.weeklyLimit"
-        @update:model-value="family.setWeeklyLimit($event)"
+        :model-value="family.limits.monthlyLimit"
+        @update:model-value="family.setMonthlyLimit($event)"
       />
     </div>
 
