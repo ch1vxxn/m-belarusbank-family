@@ -6,10 +6,9 @@
  */
 
 import { X } from 'lucide-vue-next'
-import type { Notice } from '@/stores/family'
 
 defineProps<{
-  notice: Notice
+  notice: { kind: 'success' | 'error'; text: string }
 }>()
 
 const emit = defineEmits<{
