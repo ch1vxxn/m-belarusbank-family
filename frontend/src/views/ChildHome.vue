@@ -1,15 +1,12 @@
 <script setup lang="ts">
 /**
  * ChildHome — профиль ребёнка (роут /child).
- *
- * Карта, кнопки «Перевести»/«Пауза», табы (Операции/Лимиты/Копилки/Задания),
- * шторка перевода и шторка статистики трат.
  */
 
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFamilyStore } from '@/stores/family'
-import { ChevronLeft, ArrowUpRight } from 'lucide-vue-next'
+import { ChevronLeft, ArrowUpRight, Plus } from 'lucide-vue-next'
 import ToggleListItem from '@/components/ToggleListItem.vue'
 
 const router = useRouter()
@@ -61,11 +58,15 @@ const executeTransfer = () => {
   if (ok) {
     isTransferModalOpen.value = false
   } else {
-    family.setNotice('error', 'Недостаточно средств или неверная сумма')
+    if (!family.card?.isActive) {
+      family.setNotice('error', 'Детская карта заблокирована. Разблокируйте её для переводов.')
+    } else {
+      family.setNotice('error', 'Недостаточно средств или неверная сумма')
+    }
   }
 }
 
-// ── БАГ №16: статистика из реальных транзакций (убираем хардкод) ──
+// ── Статистика из реальных транзакций ──
 const monthlyStats = computed(() => {
   let expenses = 0
   let topups = 0
@@ -81,7 +82,7 @@ const monthlyStats = computed(() => {
   }
 })
 
-// Категории расходов для шторки статистики (считаем из транзакций)
+// Категории расходов для шторки статистики
 const categoriesStats = computed(() => {
   const map: Record<string, { label: string; emoji: string; total: number; color: string }> = {
     food: { label: 'Еда', emoji: '🍔', total: 0, color: '#F4A261' },
@@ -91,9 +92,8 @@ const categoriesStats = computed(() => {
     clothes: { label: 'Одежда', emoji: '👕', total: 0, color: '#8E44AD' },
   }
   for (const t of family.transactions) {
-  const bucket = map[t.category]
-  if (t.amount < 0 && bucket) {
-    bucket.total += Math.abs(t.amount)
+    if (t.amount < 0 && map[t.category]) {
+      map[t.category]!.total += Math.abs(t.amount)
     }
   }
   const total = Object.values(map).reduce((s, c) => s + c.total, 0) || 1
@@ -116,7 +116,7 @@ const categoriesStats = computed(() => {
       <button @click="router.push('/family')" class="text-white/80 hover:text-white">
         <ChevronLeft class="w-7 h-7" stroke-width="1.5" />
       </button>
-      <h1 class="text-[17px] font-semibold">Профиль {{ family.child.name }}</h1>
+      <h1 class="text-[17px] font-semibold">Профиль {{ family.child?.name || 'ребёнка' }}</h1>
       <div class="w-7"></div>
     </header>
 
@@ -125,7 +125,7 @@ const categoriesStats = computed(() => {
       <div
         class="relative overflow-hidden rounded-[22px] p-5 text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)] mb-6 transition-all duration-500"
         :class="
-          family.card.isActive
+          family.card?.isActive
             ? 'bg-gradient-to-br from-[#006837] via-[#00A651] to-[#005226]'
             : 'bg-[#2C2C2E] grayscale'
         "
@@ -144,15 +144,15 @@ const categoriesStats = computed(() => {
               </svg>
             </div>
           </div>
-          <h2 class="text-2xl font-bold mb-4">{{ family.child.name }}</h2>
+          <h2 class="text-2xl font-bold mb-4">{{ family.child?.name || 'Ребёнок' }}</h2>
           <div class="mb-6">
             <p class="text-[12px] text-white/70">На карте</p>
             <p class="text-3xl font-bold mt-0.5">{{ family.childBalanceFormatted }}</p>
           </div>
           <div class="flex justify-between items-end">
-            <p class="text-[13px] text-white/80 font-mono">•• {{ family.card.maskedNumber.slice(-4) }}</p>
+            <p class="text-[13px] text-white/80 font-mono">•• {{ family.card?.maskedNumber.slice(-4) || '0000' }}</p>
             <p class="text-[11px] text-white/70">
-              {{ family.child.age }} лет • 7–13 лет • уровень 2
+              {{ family.child?.age || 10 }} лет • {{ family.child?.ageGroup === '14-17' ? '14–17' : '7–13' }} лет
             </p>
           </div>
         </div>
@@ -171,13 +171,13 @@ const categoriesStats = computed(() => {
           @click="family.toggleCardActive()"
           class="flex-1 bg-[#1C1C1E] text-white font-semibold py-3.5 rounded-xl shadow-sm flex items-center justify-center gap-2 border border-white/5 hover:bg-[#2C2C2E] transition-colors"
         >
-          <svg v-if="family.card.isActive" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <svg v-if="family.card?.isActive" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
             <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
           </svg>
           <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
             <path d="M8 5v14l11-7z" />
           </svg>
-          {{ family.card.isActive ? 'Пауза' : 'Включить' }}
+          {{ family.card?.isActive ? 'Пауза' : 'Включить' }}
         </button>
       </div>
 
@@ -208,7 +208,6 @@ const categoriesStats = computed(() => {
       <div class="bg-[#1C1C1E] rounded-2xl p-4 shadow-sm relative z-10">
         <!-- ОПЕРАЦИИ -->
         <div v-if="activeTab === 'operations'" class="space-y-6">
-          <!-- Блок трат -->
           <div
             @click="isStatsModalOpen = true"
             class="cursor-pointer bg-[#2C2C2E] rounded-2xl p-4 transition-transform active:scale-[0.98]"
@@ -232,7 +231,6 @@ const categoriesStats = computed(() => {
             </div>
           </div>
 
-          <!-- Список операций -->
           <div class="space-y-6">
             <div v-for="group in family.transactionsGrouped" :key="group.date">
               <p class="text-[13px] font-medium text-white/50 mb-3">{{ group.date }}</p>
@@ -272,45 +270,43 @@ const categoriesStats = computed(() => {
         <!-- ЛИМИТЫ -->
         <div v-if="activeTab === 'limits'" class="space-y-6">
           <div>
-            <p class="text-[15px] font-medium text-white mb-2">Возрастной профиль · 7–13 лет</p>
+            <p class="text-[15px] font-medium text-white mb-2">Возрастной профиль · {{ family.child?.ageGroup === '14-17' ? '14–17' : '7–13' }} лет</p>
             <p class="text-[13px] text-white/50 leading-relaxed">
               Дополнительная карта к счёту законного представителя. Лимиты и покупки контролирует родитель.
             </p>
           </div>
 
-          <!-- БАГ №15: ToggleListItem вместо инлайна -->
           <div>
             <p class="text-[15px] font-medium text-white mb-3">Можно ребёнку</p>
             <div class="space-y-1">
               <ToggleListItem
                 label="Оплата по QR"
-                :model-value="family.permissions.qrPay"
+                :model-value="family.permissions?.qrPay || false"
                 @update:model-value="family.togglePermission('qrPay')"
               />
               <ToggleListItem
                 label="Покупки картой"
-                :model-value="family.permissions.cardPay"
+                :model-value="family.permissions?.cardPay || false"
                 @update:model-value="family.togglePermission('cardPay')"
               />
               <ToggleListItem
                 label="Покупки онлайн"
-                :model-value="family.permissions.onlinePay"
+                :model-value="family.permissions?.onlinePay || false"
                 @update:model-value="family.togglePermission('onlinePay')"
               />
               <ToggleListItem
                 label="Переводы друзьям"
-                :model-value="family.permissions.friendsTransfer"
+                :model-value="family.permissions?.friendsTransfer || false"
                 @update:model-value="family.togglePermission('friendsTransfer')"
               />
               <ToggleListItem
                 label="Снятие наличных"
-                :model-value="family.permissions.cashWithdrawal"
+                :model-value="family.permissions?.cashWithdrawal || false"
                 @update:model-value="family.togglePermission('cashWithdrawal')"
               />
             </div>
           </div>
 
-          <!-- Лимиты и одобрение (степперы) -->
           <div>
             <p class="text-[15px] font-medium text-white mb-3">Лимиты и одобрение</p>
             <div class="space-y-3">
@@ -318,14 +314,14 @@ const categoriesStats = computed(() => {
                 <span class="text-[14px] text-white/70">На одну покупку</span>
                 <div class="flex items-center gap-2">
                   <button
-                    @click="family.setPerPurchase(Math.max(0, family.limits.perPurchase - 1))"
+                    @click="family.setPerPurchase(Math.max(0, (family.limits?.perPurchase || 0) - 1))"
                     class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
                   >−</button>
                   <span class="text-[14px] font-medium text-white w-20 text-center">
-                    {{ family.limits.perPurchase }},00 BYN
+                    {{ family.limits?.perPurchase || 0 }},00 BYN
                   </span>
                   <button
-                    @click="family.setPerPurchase(family.limits.perPurchase + 1)"
+                    @click="family.setPerPurchase((family.limits?.perPurchase || 0) + 1)"
                     class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
                   >+</button>
                 </div>
@@ -334,14 +330,14 @@ const categoriesStats = computed(() => {
                 <span class="text-[14px] text-white/70">В день</span>
                 <div class="flex items-center gap-2">
                   <button
-                    @click="family.setDailyLimit(Math.max(0, family.limits.dailyLimit - 1))"
+                    @click="family.setDailyLimit(Math.max(0, (family.limits?.dailyLimit || 0) - 1))"
                     class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
                   >−</button>
                   <span class="text-[14px] font-medium text-white w-20 text-center">
-                    {{ family.limits.dailyLimit }},00 BYN
+                    {{ family.limits?.dailyLimit || 0 }},00 BYN
                   </span>
                   <button
-                    @click="family.setDailyLimit(family.limits.dailyLimit + 1)"
+                    @click="family.setDailyLimit((family.limits?.dailyLimit || 0) + 1)"
                     class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
                   >+</button>
                 </div>
@@ -350,14 +346,14 @@ const categoriesStats = computed(() => {
                 <span class="text-[14px] text-white/70">В месяц</span>
                 <div class="flex items-center gap-2">
                   <button
-                    @click="family.setMonthlyLimit(Math.max(0, family.limits.monthlyLimit - 1))"
+                    @click="family.setMonthlyLimit(Math.max(0, (family.limits?.monthlyLimit || 0) - 1))"
                     class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
                   >−</button>
                   <span class="text-[14px] font-medium text-white w-20 text-center">
-                    {{ family.limits.monthlyLimit }},00 BYN
+                    {{ family.limits?.monthlyLimit || 0 }},00 BYN
                   </span>
                   <button
-                    @click="family.setMonthlyLimit(family.limits.monthlyLimit + 1)"
+                    @click="family.setMonthlyLimit((family.limits?.monthlyLimit || 0) + 1)"
                     class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
                   >+</button>
                 </div>
@@ -366,14 +362,14 @@ const categoriesStats = computed(() => {
                 <span class="text-[14px] text-white/70">Спрашивать родителя от</span>
                 <div class="flex items-center gap-2">
                   <button
-                    @click="family.setApprovalThreshold(Math.max(0, family.limits.approvalThreshold - 1))"
+                    @click="family.setApprovalThreshold(Math.max(0, (family.limits?.approvalThreshold || 0) - 1))"
                     class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
                   >−</button>
                   <span class="text-[14px] font-medium text-white w-20 text-center">
-                    {{ family.limits.approvalThreshold }},00 BYN
+                    {{ family.limits?.approvalThreshold || 0 }},00 BYN
                   </span>
                   <button
-                    @click="family.setApprovalThreshold(family.limits.approvalThreshold + 1)"
+                    @click="family.setApprovalThreshold((family.limits?.approvalThreshold || 0) + 1)"
                     class="w-7 h-7 bg-[#2C2C2E] rounded-md flex items-center justify-center text-white/70 hover:bg-[#3C3C3E] transition-colors"
                   >+</button>
                 </div>
@@ -381,7 +377,6 @@ const categoriesStats = computed(() => {
             </div>
           </div>
 
-          <!-- Карманные -->
           <div>
             <p class="text-[15px] font-medium text-white mb-3">Карманные</p>
             <div class="flex justify-between items-center mb-2 py-1">
@@ -412,7 +407,6 @@ const categoriesStats = computed(() => {
             </div>
           </div>
 
-          <!-- Категории -->
           <div>
             <p class="text-[15px] font-medium text-white mb-3">Категории</p>
             <div class="mb-4 bg-[#2C2C2E] p-3 rounded-lg border border-white/5">
@@ -467,16 +461,26 @@ const categoriesStats = computed(() => {
         </div>
 
         <!-- ЗАДАНИЯ -->
-        <div v-if="activeTab === 'tasks'" class="space-y-3">
-          <div
-            v-for="chore in family.chores"
-            :key="chore.id"
-            class="flex items-center justify-between bg-[#2C2C2E] p-3 rounded-xl"
-          >
-            <span class="text-[14px]" :class="chore.completed ? 'line-through text-white/50' : ''">
-              {{ chore.title }}
-            </span>
-            <span class="text-[13px] font-semibold text-[#00A651]">+{{ chore.reward }} BYN</span>
+        <div v-if="activeTab === 'tasks'" class="space-y-4">
+          <div class="flex items-center justify-between mb-2">
+            <p class="text-[15px] font-semibold">Задания</p>
+            <button 
+              @click="router.push('/tasks')" 
+              class="flex items-center gap-1 text-[#00A651] text-[13px] font-medium hover:opacity-80 transition-opacity"
+            >
+              <Plus class="w-4 h-4" /> Добавить
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div v-for="chore in family.chores" :key="chore.id" class="flex items-center justify-between bg-[#2C2C2E] p-3 rounded-xl">
+              <span class="text-[14px]" :class="chore.completed ? 'line-through text-white/50' : ''">{{ chore.title }}</span>
+              <span class="text-[13px] font-semibold text-[#00A651]">+{{ chore.reward }} BYN</span>
+            </div>
+            
+            <p v-if="family.chores.length === 0" class="text-center text-sm text-white/40 py-4">
+              Заданий пока нет
+            </p>
           </div>
         </div>
       </div>
@@ -575,16 +579,16 @@ const categoriesStats = computed(() => {
               class="absolute bottom-full left-0 right-0 mb-2 bg-[#2C2C2E] rounded-xl shadow-xl z-50 overflow-hidden border border-white/5"
             >
               <button
-                v-for="(card, index) in family.cards"
-                :key="card.id"
+                v-for="(c, index) in family.cards"
+                :key="c.id"
                 @click="family.setCurrentCardIndex(index); isCardSelectOpen = false"
                 class="w-full text-left p-4 hover:bg-[#3C3C3E] transition-colors border-b border-white/5 last:border-0 flex justify-between items-center"
               >
                 <div>
                   <p class="text-[14px] text-white font-medium">
-                    {{ card.title }} •• {{ card.maskedNumber.slice(-4) }}
+                    {{ c.title }} •• {{ c.maskedNumber.slice(-4) }}
                   </p>
-                  <p class="text-[12px] text-white/50">{{ card.balance.toFixed(2) }} BYN</p>
+                  <p class="text-[12px] text-white/50">{{ c.balance.toFixed(2) }} BYN</p>
                 </div>
                 <span v-if="family.currentCardIndex === index" class="text-[#00A651]">✓</span>
               </button>
@@ -592,7 +596,7 @@ const categoriesStats = computed(() => {
           </div>
 
           <!-- Сумма -->
-          <p class="text-[14px] text-white/50 mb-2">Для {{ family.child.name }}</p>
+          <p class="text-[14px] text-white/50 mb-2">Для {{ family.child?.name || 'ребёнка' }}</p>
           <div class="bg-[#2C2C2E] rounded-2xl p-4 flex justify-between items-center mb-4 border border-white/5">
             <input
               v-model.number="transferAmount"

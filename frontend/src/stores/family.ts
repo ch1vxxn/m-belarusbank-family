@@ -1,14 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import type {
-  ChildProfile,
-  ChildCard,
-  Transaction,
-  SpendingCategory,
-  SavingsGoal,
-  GoalContribution,
-  Chore,
-} from '@/types'
+import type { ChildProfile, ChildCard, Transaction, SpendingCategory, SavingsGoal, GoalContribution, Chore, AgeGroup } from '@/types'
 
 export interface Notification {
   id: string
@@ -17,12 +9,11 @@ export interface Notification {
   time: string
   isRead: boolean
   type: 'request' | 'info'
-  /** Что именно просит ребёнок (для approve/decline) */
   payload?: { kind: 'money' | 'permission'; amount?: number; key?: string }
 }
 
 export const useFamilyStore = defineStore('family', () => {
-  // ── КАРТЫ ──
+  // ── КАРТЫ РОДИТЕЛЯ ──
   const cards = ref([
     {
       id: 1,
@@ -32,6 +23,7 @@ export const useFamilyStore = defineStore('family', () => {
       design: 'emerald',
       maskedNumber: '**** **** **** 9883',
       isActive: true,
+      paymentSystem: 'VISA' as const,
     },
   ])
 
@@ -45,66 +37,106 @@ export const useFamilyStore = defineStore('family', () => {
       design: design,
       maskedNumber: `**** **** **** ${Math.floor(1000 + Math.random() * 9000)}`,
       isActive: true,
+      paymentSystem: 'VISA' as const,
     })
   }
 
+  // ── ДЕТИ (массив) ──
+  const children = ref<(ChildProfile & { balance: number; card: ChildCard; permissions: Record<string, boolean>; limits: Record<string, number> })[]>([
+    {
+      id: 'child-1',
+      name: 'Миша',
+      age: 10,
+      initials: 'МП',
+      ageGroup: '7-13',
+      balance: 30.0,
+      card: {
+        maskedNumber: '**** **** **** 9883',
+        balance: 2000.0,
+        currency: 'BYN',
+        paymentSystem: 'VISA',
+        isActive: true,
+      },
+      permissions: {
+        qrPay: true,
+        cardPay: true,
+        onlinePay: false,
+        friendsTransfer: false,
+        cashWithdrawal: false,
+      },
+      limits: {
+        perPurchase: 30,
+        dailyLimit: 50,
+        monthlyLimit: 250,
+        approvalThreshold: 25,
+      },
+    },
+  ])
+
+  const activeChildIndex = ref(0)
+
+  // ── ГЕТТЕРЫ АКТИВНОГО РЕБЁНКА (с as, чтобы TS не ругался) ──
+  const child = computed(() => {
+    const c = children.value[activeChildIndex.value] || children.value[0]
+    return c as ChildProfile & { balance: number; card: ChildCard; permissions: Record<string, boolean>; limits: Record<string, number> }
+  })
+  
+  const childBalance = computed({
+    get: () => child.value.balance,
+    set: (val) => { child.value.balance = val }
+  })
+  
+  const card = computed(() => child.value.card)
+  const permissions = computed(() => child.value.permissions)
+  const limits = computed(() => child.value.limits)
+
+  // ── ДОБАВЛЕНИЕ РЕБЁНКА ──
+  function addChild(data: { name: string; age: number; ageGroup: AgeGroup; initials: string }) {
+    const isTeen = data.ageGroup === '14-17'
+    const newId = `child-${Date.now()}`
+
+    children.value.push({
+      id: newId,
+      name: data.name,
+      age: data.age,
+      initials: data.initials,
+      ageGroup: data.ageGroup,
+      balance: 0,
+      card: {
+        maskedNumber: `**** **** **** ${Math.floor(1000 + Math.random() * 9000)}`,
+        balance: 0,
+        currency: 'BYN',
+        paymentSystem: 'VISA',
+        isActive: true,
+      },
+      permissions: {
+        qrPay: true,
+        cardPay: true,
+        onlinePay: isTeen,
+        friendsTransfer: isTeen,
+        cashWithdrawal: isTeen,
+      },
+      limits: {
+        perPurchase: isTeen ? 100 : 30,
+        dailyLimit: isTeen ? 150 : 50,
+        monthlyLimit: isTeen ? 1000 : 250,
+        approvalThreshold: isTeen ? 100 : 25,
+      },
+    })
+
+    setNotice('success', `Ребёнок ${data.name} успешно добавлен!`)
+    return true
+  }
+
   // ── ОСТАЛЬНОЕ СОСТОЯНИЕ ──
-  const childBalance = ref<number>(30.0)
-  const child = ref<ChildProfile>({ id: 'child-1', name: 'Миша', age: 10, initials: 'МП' })
-
-  const card = ref<ChildCard>({
-    maskedNumber: '**** **** **** 9883',
-    balance: 2000.0,
-    currency: 'BYN',
-    paymentSystem: 'VISA',
-    isActive: true,
-  })
-
-  const permissions = ref({
-    qrPay: true,
-    cardPay: true,
-    onlinePay: false,
-    friendsTransfer: false,
-    cashWithdrawal: false,
-  })
-
   const isAnyModalOpen = ref(false)
-
-  const limits = ref({
-    perPurchase: 30,
-    dailyLimit: 50,
-    monthlyLimit: 250,
-    approvalThreshold: 25,
-  })
-
   const allowances = ref({ isActive: true, amount: 10 })
 
-  // ── ТРАНЗАКЦИИ (ISO-даты!) ──
+  // ── ТРАНЗАКЦИИ ──
   const transactions = ref<Transaction[]>([
-    {
-      id: 't1',
-      merchant: 'Мама: Молодец!',
-      category: 'topup',
-      amount: 10.0,
-      date: '2026-10-24',
-      time: '15:05',
-    },
-    {
-      id: 't2',
-      merchant: 'Минский метрополитен',
-      category: 'transport',
-      amount: -1.6,
-      date: '2026-10-24',
-      time: '10:05',
-    },
-    {
-      id: 't3',
-      merchant: 'Бургерная «Обед»',
-      category: 'food',
-      amount: -7.9,
-      date: '2026-10-23',
-      time: '17:05',
-    },
+    { id: 't1', merchant: 'Мама: Молодец!', category: 'topup', amount: 10.0, date: '2026-10-24', time: '15:05' },
+    { id: 't2', merchant: 'Минский метрополитен', category: 'transport', amount: -1.6, date: '2026-10-24', time: '10:05' },
+    { id: 't3', merchant: 'Бургерная «Обед»', category: 'food', amount: -7.9, date: '2026-10-23', time: '17:05' },
   ])
 
   const spendingCategories = ref<SpendingCategory[]>([
@@ -124,7 +156,6 @@ export const useFamilyStore = defineStore('family', () => {
 
   const goalHistory = ref<GoalContribution[]>([])
 
-  // ch2 теперь НЕ выполнено — чтобы показать flow начисления
   const chores = ref<Chore[]>([
     { id: 'ch1', title: 'Помыть посуду', reward: 5, completed: false },
     { id: 'ch2', title: 'Сделать уроки', reward: 3, completed: false },
@@ -149,20 +180,14 @@ export const useFamilyStore = defineStore('family', () => {
 
   // ── ГЕТТЕРЫ ──
   const formatMoney = (val: number) =>
-    new Intl.NumberFormat('ru-RU', {
-      style: 'currency',
-      currency: 'BYN',
-      minimumFractionDigits: 2,
-    }).format(val)
+    new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'BYN', minimumFractionDigits: 2 }).format(val)
 
   const childBalanceFormatted = computed(() => formatMoney(childBalance.value))
-
-  // ФИКС №1: баланс родителя = баланс активной карты
   const parentBalance = computed(() => cards.value[currentCardIndex.value]?.balance ?? 0)
   const parentBalanceFormatted = computed(() => formatMoney(parentBalance.value))
 
   const goalProgress = computed(() =>
-    Math.min(100, Math.round((savingsGoal.value.current / savingsGoal.value.target) * 100)),
+    Math.min(100, Math.round((savingsGoal.value.current / savingsGoal.value.target) * 100))
   )
 
   const transactionsGrouped = computed(() => {
@@ -202,11 +227,9 @@ export const useFamilyStore = defineStore('family', () => {
   }
 
   // ── ЭКШЕНЫ ──
-
-  // ФИКС №3: transfer создаёт транзакцию
   function transfer(amount: number) {
     const activeCard = cards.value[currentCardIndex.value]
-    if (!activeCard || amount <= 0 || amount > activeCard.balance) return false
+    if (!activeCard || !card.value?.isActive || amount <= 0 || amount > activeCard.balance) return false
 
     activeCard.balance -= amount
     childBalance.value += amount
@@ -215,10 +238,9 @@ export const useFamilyStore = defineStore('family', () => {
     return true
   }
 
-  // ФИКС №2: depositToGoal пишет в goalHistory + транзакцию
   function depositToGoal(amount: number) {
     const activeCard = cards.value[currentCardIndex.value]
-    if (!activeCard || amount <= 0 || amount > activeCard.balance) return false
+    if (!activeCard || !card.value?.isActive || amount <= 0 || amount > activeCard.balance) return false
 
     activeCard.balance -= amount
     savingsGoal.value.current += amount
@@ -231,11 +253,9 @@ export const useFamilyStore = defineStore('family', () => {
       sourceLabel: 'Пополнение от родителя',
     })
     pushTransaction('Пополнение копилки', amount)
-
     return true
   }
 
-  // ФИКС №5: начисление награды за задание
   function completeChore(id: string) {
     const chore = chores.value.find((c) => c.id === id)
     if (!chore || chore.completed) return false
@@ -247,7 +267,6 @@ export const useFamilyStore = defineStore('family', () => {
     return true
   }
 
-  // ФИКС №8: реальный approve/decline запроса
   function resolveRequest(id: string, approve: boolean) {
     const n = notifications.value.find((x) => x.id === id)
     if (!n) return false
@@ -258,8 +277,7 @@ export const useFamilyStore = defineStore('family', () => {
         pushTransaction('Одобрен запрос ребёнка', n.payload.amount)
         setNotice('success', 'Запрос одобрен')
       } else if (n.payload.kind === 'permission' && n.payload.key) {
-        const key = n.payload.key as keyof typeof permissions.value
-        permissions.value[key] = true
+        child.value.permissions[n.payload.key] = true
         setNotice('success', 'Доступ разрешён')
       }
     } else if (!approve) {
@@ -270,109 +288,48 @@ export const useFamilyStore = defineStore('family', () => {
     return true
   }
 
-  // ФИКС №14: очистка уведомлений через action
   function clearNotifications() {
     notifications.value = []
   }
 
-  function setDailyLimit(val: number) {
-    limits.value.dailyLimit = val
-  }
-  function setPerPurchase(val: number) {
-    limits.value.perPurchase = val
-  }
-  function setMonthlyLimit(val: number) {
-    limits.value.monthlyLimit = val
-  }
-  function setApprovalThreshold(val: number) {
-    limits.value.approvalThreshold = val
-  }
+  function setDailyLimit(val: number) { child.value.limits.dailyLimit = val }
+  function setPerPurchase(val: number) { child.value.limits.perPurchase = val }
+  function setMonthlyLimit(val: number) { child.value.limits.monthlyLimit = val }
+  function setApprovalThreshold(val: number) { child.value.limits.approvalThreshold = val }
 
   function toggleSpendingCategory(id: string) {
     const cat = spendingCategories.value.find((c) => c.id === id)
     if (cat) cat.isAllowed = !cat.isAllowed
   }
-  function togglePermission(key: keyof typeof permissions.value) {
-    permissions.value[key] = !permissions.value[key]
+
+  function togglePermission(key: string) {
+    if (child.value) child.value.permissions[key] = !child.value.permissions[key]
   }
-  function toggleAllowance() {
-    allowances.value.isActive = !allowances.value.isActive
-  }
-  function setAllowanceAmount(val: number) {
-    allowances.value.amount = val
-  }
+
+  function toggleAllowance() { allowances.value.isActive = !allowances.value.isActive }
+  function setAllowanceAmount(val: number) { allowances.value.amount = val }
 
   function toggleCardActive() {
-    card.value.isActive = !card.value.isActive
-    card.value = { ...card.value }
+    if (child.value) {
+      child.value.card.isActive = !child.value.card.isActive
+      children.value = [...children.value]
+    }
   }
 
-  function setCurrentCardIndex(index: number) {
-    currentCardIndex.value = index
-  }
-  function setCardDesign(design: 'emerald' | 'sunset' | 'sky' | 'glass') {
-    cardDesign.value = design
-  }
-  function setCardColor(color: 'emerald' | 'gold' | 'purple') {
-    cardColor.value = color
-  }
-  function deleteNotification(id: string) {
-    notifications.value = notifications.value.filter((n) => n.id !== id)
-  }
-  function setModalState(isOpen: boolean) {
-    isAnyModalOpen.value = isOpen
-  }
+  function setCurrentCardIndex(index: number) { currentCardIndex.value = index }
+  function setCardDesign(design: 'emerald' | 'sunset' | 'sky' | 'glass') { cardDesign.value = design }
+  function setCardColor(color: 'emerald' | 'gold' | 'purple') { cardColor.value = color }
+  function deleteNotification(id: string) { notifications.value = notifications.value.filter((n) => n.id !== id) }
+  function setModalState(isOpen: boolean) { isAnyModalOpen.value = isOpen }
 
   return {
-    cards,
-    addCard,
-    card,
-    childBalance,
-    child,
-    limits,
-    transactions,
-    spendingCategories,
-    savingsGoal,
-    goalHistory,
-    chores,
-    notifications,
-    notice,
-    currentCardIndex,
-    cardDesign,
-    cardColor,
-    childBalanceFormatted,
-    // ФИКС №1: новые геттеры
-    parentBalance,
-    parentBalanceFormatted,
-    goalProgress,
-    transactionsGrouped,
-    isAnyModalOpen,
-    transfer,
-    depositToGoal,
-    // ФИКС №5
-    completeChore,
-    // ФИКС №8
-    resolveRequest,
-    // ФИКС №14
-    clearNotifications,
-    // ФИКС №13
-    setNotice,
-    setDailyLimit,
-    toggleSpendingCategory,
-    clearNotice,
-    setCurrentCardIndex,
-    deleteNotification,
-    setCardDesign,
-    toggleCardActive,
-    setCardColor,
-    setPerPurchase,
-    setMonthlyLimit,
-    setApprovalThreshold,
-    permissions,
-    togglePermission,
-    toggleAllowance,
-    setAllowanceAmount,
-    allowances,
-    setModalState,
+    cards, addCard, card, childBalance, child, children, activeChildIndex, addChild, limits,
+    transactions, spendingCategories, savingsGoal, goalHistory, chores, notifications, notice,
+    currentCardIndex, cardDesign, cardColor, childBalanceFormatted, parentBalance, parentBalanceFormatted,
+    goalProgress, transactionsGrouped, isAnyModalOpen, transfer, depositToGoal, completeChore,
+    resolveRequest, clearNotifications, setNotice, setDailyLimit, toggleSpendingCategory, clearNotice,
+    setCurrentCardIndex, deleteNotification, setCardDesign, toggleCardActive, setCardColor,
+    setPerPurchase, setMonthlyLimit, setApprovalThreshold, permissions, togglePermission,
+    toggleAllowance, setAllowanceAmount, allowances, setModalState,
   }
 })

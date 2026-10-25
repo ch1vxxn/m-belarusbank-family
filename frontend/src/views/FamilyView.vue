@@ -9,7 +9,7 @@
 import { ref, onMounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFamilyStore } from '@/stores/family'
-import { ChevronLeft, Plus, ShieldCheck } from 'lucide-vue-next'
+import { ChevronLeft, Plus, ShieldCheck, } from 'lucide-vue-next'
 import { DAILY_LIMIT_PRESETS } from '@/types'
 
 const router = useRouter()
@@ -54,7 +54,12 @@ const executeTransfer = () => {
   if (ok) {
     isTransferModalOpen.value = false
   } else {
-    family.setNotice('error', 'Недостаточно средств или неверная сумма')
+    // Если карта заблокирована — показываем правильный текст
+    if (!family.card?.isActive) {
+      family.setNotice('error', 'Детская карта заблокирована. Разблокируйте её для переводов.')
+    } else {
+      family.setNotice('error', 'Недостаточно средств или неверная сумма')
+    }
   }
 }
 
@@ -67,6 +72,7 @@ watch(isTransferModalOpen, (open) => {
 function selectLimit(val: number): void {
   family.setDailyLimit(val)
 }
+
 </script>
 
 <template>
@@ -104,41 +110,40 @@ function selectLimit(val: number): void {
         </button>
       </div>
 
-      <!-- ТАБ: ДЕТИ -->
+            <!-- ТАБ: ДЕТИ -->
       <div v-if="activeTab === 'children'" class="space-y-4">
-        <div
-          @click="router.push('/child')"
+        <!-- Карточки всех детей -->
+        <div 
+          v-for="(c, index) in family.children" 
+          :key="c.id" 
+          @click="family.activeChildIndex = index; router.push('/child')"
           class="relative overflow-hidden rounded-2xl p-4 text-white shadow-lg cursor-pointer bg-gradient-to-br from-[#006837] via-[#00A651] to-[#005226]"
         >
           <div class="flex justify-between items-start mb-4">
             <p class="text-[11px] font-medium text-white/70">M-Belarusbank Family</p>
             <div class="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
               <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"
-                ></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
               </svg>
             </div>
           </div>
 
-          <h2 class="text-lg font-bold mb-2">{{ family.child.name }}</h2>
+          <h2 class="text-lg font-bold mb-2">{{ c.name }}</h2>
           <div class="mb-4">
             <p class="text-[11px] text-white/70">На карте</p>
-            <p class="text-2xl font-bold mt-0.5">{{ family.childBalanceFormatted }}</p>
+            <p class="text-2xl font-bold mt-0.5">{{ c.balance.toFixed(2) }} BYN</p>
           </div>
 
           <div class="flex justify-between items-end">
-            <p class="text-[12px] text-white/70 font-mono">•• {{ family.card.maskedNumber.slice(-4) }}</p>
+            <p class="text-[12px] text-white/70 font-mono">•• {{ c.card.maskedNumber.slice(-4) }}</p>
             <p class="text-[10px] text-white/60">
-              {{ family.child.age }} лет • 7–13 лет • уровень 2
+              {{ c.age }} лет • {{ c.ageGroup }} лет
             </p>
           </div>
         </div>
 
-        <button class="w-full mt-4 bg-[#1C1C1E] text-[#00A651] font-semibold py-3 rounded-xl shadow-sm flex items-center justify-center gap-2 border border-white/5 text-[14px]">
+        <!-- Кнопка Добавить -->
+        <button @click="router.push('/add-child')" class="w-full mt-4 bg-[#1C1C1E] text-[#00A651] font-semibold py-3 rounded-xl shadow-sm flex items-center justify-center gap-2 border border-white/5 text-[14px] hover:bg-[#2C2C2E] transition-colors">
           <Plus class="w-4 h-4" /> Добавить ребёнка
         </button>
       </div>
@@ -158,7 +163,7 @@ function selectLimit(val: number): void {
       <div v-if="activeTab === 'settings'" class="space-y-4">
         <div class="bg-[#1C1C1E] rounded-2xl p-4 shadow-sm space-y-4">
           <h2 class="text-[15px] font-bold flex items-center gap-2 text-white">
-            Лимиты {{ family.child.name }}
+            Лимиты {{ family.child?.name }}
           </h2>
           <p class="text-[12px] text-white/50 -mt-2">Дневной лимит трат</p>
           <div class="grid grid-cols-2 gap-2">
@@ -168,7 +173,7 @@ function selectLimit(val: number): void {
               @click="selectLimit(preset)"
               class="py-2 rounded-lg text-sm transition-colors"
               :class="
-                family.limits.dailyLimit === preset
+                family.limits?.dailyLimit === preset
                   ? 'bg-[#00A651] text-white font-semibold'
                   : 'bg-[#2C2C2E] text-white/60 hover:bg-[#3C3C3E]'
               "
@@ -195,7 +200,7 @@ function selectLimit(val: number): void {
     >
       <div class="bg-[#1C1C1E] w-full max-w-[390px] rounded-t-3xl sm:rounded-3xl p-6 pb-8 animate-slide-up">
         <div class="flex justify-between items-center mb-6">
-          <h3 class="text-lg font-bold text-white">Перевод {{ family.child.name }}</h3>
+          <h3 class="text-lg font-bold text-white">Перевод {{ family.child?.name }}</h3>
           <button @click="isTransferModalOpen = false" class="text-white/50 text-sm font-medium">
             Отмена
           </button>
