@@ -1,9 +1,6 @@
 <script setup lang="ts">
 /**
- * ChildCardManage — экран 2: Управление детской картой.
- *
- * Полноразмерная карта, баланс, лимиты, разрешённые категории,
- * история операций с группировкой по датам, кнопка блокировки.
+ * ChildCardManage — экран управления детской картой.
  */
 
 import { useRouter } from 'vue-router'
@@ -23,7 +20,9 @@ function goBack(): void {
 }
 
 function formatDate(dateStr: string): string {
+  if (dateStr === 'Сегодня' || dateStr === 'Вчера') return dateStr
   const d = new Date(dateStr)
+  if (Number.isNaN(d.getTime())) return dateStr
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'short' })
 }
 </script>
@@ -41,16 +40,18 @@ function formatDate(dateStr: string): string {
     </button>
 
     <!-- Банковская карта (полная) -->
+    <!-- Используем family.card? и family.childBalanceFormatted -->
     <BankCard
+      v-if="family.card"
       :masked-number="family.card.maskedNumber"
-      :balance="family.cardBalanceFormatted"
+      :balance="family.childBalanceFormatted"
       :payment-system="family.card.paymentSystem"
       :is-active="family.card.isActive"
     />
 
     <!-- Баланс -->
     <BalanceSummary
-      :amount="family.cardBalanceFormatted"
+      :amount="family.childBalanceFormatted"
       label="Баланс детской карты"
     />
 
@@ -59,12 +60,12 @@ function formatDate(dateStr: string): string {
       <h2 class="text-[15px] font-semibold">Настройка лимитов</h2>
       <LimitSelector
         title="Дневной лимит"
-        :model-value="family.limits.dailyLimit"
+        :model-value="family.limits?.dailyLimit || 50"
         @update:model-value="family.setDailyLimit($event)"
       />
       <LimitSelector
-        title="Недельный лимит"
-        :model-value="family.limits.monthlyLimit"
+        title="Месячный лимит"
+        :model-value="family.limits?.monthlyLimit || 250"
         @update:model-value="family.setMonthlyLimit($event)"
       />
     </div>
@@ -72,7 +73,7 @@ function formatDate(dateStr: string): string {
     <!-- Разрешённые категории -->
     <div class="rounded-2xl bg-[#2C2C2E] p-4">
       <h2 class="mb-1 text-[15px] font-semibold">Разрешённые категории</h2>
-      <div class="divide-y divide-white/[0.06]">
+      <div class="divide-y divide-white/5">
         <ToggleListItem
           v-for="cat in family.spendingCategories"
           :key="cat.id"
@@ -95,7 +96,7 @@ function formatDate(dateStr: string): string {
           <p class="mb-2 text-[13px] font-medium text-white/50">
             {{ formatDate(group.date) }}
           </p>
-          <div class="divide-y divide-white/[0.06]">
+          <div class="divide-y divide-white/5">
             <TransactionRow
               v-for="tx in group.items"
               :key="tx.id"
@@ -111,6 +112,7 @@ function formatDate(dateStr: string): string {
 
     <!-- Кнопка блокировки -->
     <button
+      v-if="family.card"
       type="button"
       class="w-full rounded-xl py-3.5 text-[15px] font-semibold transition"
       :class="

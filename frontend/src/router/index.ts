@@ -19,6 +19,8 @@ const router = createRouter({
     { path: '/history', name: 'history', component: () => import('@/views/PlaceholderView.vue'), props: { title: 'Журнал' } },
     { path: '/finances', name: 'finances', component: () => import('@/views/PlaceholderView.vue'), props: { title: 'Финансы' } },
     { path: '/more', name: 'more', component: () => import('@/views/PlaceholderView.vue'), props: { title: 'Ещё' } },
+    { path: '/add-child', name: 'add-child', component: () => import('@/views/AddChildView.vue') },
+    { path: '/child-dashboard', name: 'child-dashboard', component: () => import('@/views/ChildDashboard.vue') },
   ],
 })
 
