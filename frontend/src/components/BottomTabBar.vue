@@ -32,16 +32,14 @@ function isActive(to: string): boolean {
 </script>
 
 <template>
-  <nav
-    class="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.06] bg-[#1a2a2a]/95 pb-[env(safe-area-inset-bottom,4px)] backdrop-blur"
-  >
+  <nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-black/5 dark:border-white/[0.06] bg-white/90 dark:bg-[#1a2a2a]/95 pb-[env(safe-area-inset-bottom,4px)] backdrop-blur transition-colors duration-300">
     <div class="mx-auto flex max-w-[390px] items-stretch justify-around">
       <RouterLink
         v-for="item in items"
         :key="item.to"
         :to="item.to"
         class="flex flex-1 flex-col items-center gap-1 py-2 transition-colors"
-        :class="isActive(item.to) ? 'text-[#00A651]' : 'text-white/40 hover:text-white/60'"
+        :class="isActive(item.to) ? 'text-[#00A651]' : 'text-black/40 dark:text-white/40 hover:text-black/60 dark:hover:text-white/60'"
       >
         <component :is="item.icon" class="size-6" :stroke-width="isActive(item.to) ? 2 : 1.5" />
         <span class="text-[10px] font-medium leading-none">{{ item.label }}</span>
