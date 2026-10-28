@@ -3,7 +3,6 @@ import { ref } from 'vue'
 import { useFamilyStore } from '@/stores/family'
 import BankCard from '@/components/BankCard.vue'
 import AddCard from '@/components/AddCard.vue'
-import NoticeBanner from '@/components/NoticeBanner.vue'
 import ChildAvatar from '@/components/ChildAvatar.vue'
 import { Star, ChevronRight } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
@@ -41,9 +40,7 @@ const showDev = () => family.setNotice('error', 'Раздел в разрабо�
         </RouterLink>
       </header>
 
-      <div class="px-5">
-        <NoticeBanner v-if="family.notice" :notice="family.notice" @dismiss="family.clearNotice()" />
-      </div>
+    
 
       <main class="px-5 space-y-5 pt-2">
         <section>
