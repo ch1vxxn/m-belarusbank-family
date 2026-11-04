@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFamilyStore } from '@/stores/family'
 import { ChevronLeft, Bike, CheckCircle2 } from 'lucide-vue-next'
@@ -7,13 +7,7 @@ import { ChevronLeft, Bike, CheckCircle2 } from 'lucide-vue-next'
 const router = useRouter()
 const family = useFamilyStore()
 
-// Баланс родителя (активная карта)
-const parentCardBalance = computed(
-  () => family.cards[family.currentCardIndex]?.balance ?? 0,
-)
-const parentCardBalanceFormatted = computed(
-  () => `${parentCardBalance.value.toFixed(2)} BYN`,
-)
+// Детская карта — пополнение копилки из карманных денег ребёнка
 
 // Состояние модалки
 const amount = ref(50)
@@ -43,8 +37,10 @@ async function handleDeposit(): Promise<void> {
     return
   }
 
-  if (amount.value > parentCardBalance.value) {
-    errorMsg.value = `Недостаточно средств. Доступно: ${parentCardBalanceFormatted.value}`
+  // Проверяем ДЕТСКИЙ баланс — копилка списывает с ребёнка
+  const childAvailable = family.childBalance
+  if (amount.value > childAvailable) {
+    errorMsg.value = `Недостаточно средств на детской карте. Доступно: ${family.childBalanceFormatted}`
     return
   }
 
@@ -171,7 +167,7 @@ function formatDate(dateStr: string): string {
           </div>
 
           <p class="text-center text-[13px] text-black/40 dark:text-white/40 mb-2">
-            Доступно у родителя: {{ parentCardBalanceFormatted }}
+            Доступно на детской карте: {{ family.childBalanceFormatted }}
           </p>
 
           <p v-if="errorMsg" class="text-center text-[13px] text-red-500 mb-4">

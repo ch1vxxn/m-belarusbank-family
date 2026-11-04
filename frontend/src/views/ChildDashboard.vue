@@ -57,7 +57,7 @@ async function openQrScanner() {
 
 function handleQrResult(qrText: string) {
   const amount = parseQrAmount(qrText) ?? 5
-  family.setNotice('success', `QR-код распознан! Оплата ${amount} BYN`)
+  family.payByQr(amount)
   closeQrScanner()
 }
 
