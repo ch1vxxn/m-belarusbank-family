@@ -1,9 +1,5 @@
 /**
  * Типы данных «М-Беларусбанк Family».
- *
- * Все структуры повторяют предполагаемые JSON-ответы Go-бэкенда.
- * Демо-данные в store/family.ts используют эти же интерфейсы,
- * чтобы при подключении реального API ничего не сломалось.
  */
 
 // ─── Семья и ребёнок ──────────────────────────────────────────
@@ -139,12 +135,36 @@ export interface Achievement {
   color: string
 }
 
-// ─── Запросы/ответы API (существующие + новые) ──────────────
+// ─── Запросы/ответы API ────────────────────────────────────────
+
+/** Карта родителя, которая приходит с Go-сервера */
+export interface ParentCard {
+  id: number
+  title: string
+  subtitle: string
+  balance: number
+  design: string
+  maskedNumber: string
+  isActive: boolean
+  paymentSystem: 'VISA' | 'Mastercard'
+}
+
+/** Ребёнок, который приходит с Go-сервера */
+export interface ServerChild {
+  id: string
+  name: string
+  age: number
+  initials: string
+  ageGroup: AgeGroup
+  balance: number
+}
 
 export interface FamilyState {
   parentBalance: number
   childBalance: number
   tasks: string[]
+  cards: ParentCard[]
+  children: ServerChild[]
 }
 
 export interface TransferRequest {

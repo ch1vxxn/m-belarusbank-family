@@ -47,8 +47,8 @@ const openTransferModal = () => {
   isTransferModalOpen.value = true
 }
 
-const executeTransfer = () => {
-  const ok = family.transfer(transferAmount.value)
+const executeTransfer = async () => {
+  const ok = await family.transfer(transferAmount.value)
   if (ok) {
     isTransferModalOpen.value = false
   } else {

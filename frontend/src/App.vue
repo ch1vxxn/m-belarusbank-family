@@ -1,12 +1,14 @@
 <script setup lang="ts">
-/**
- * Корень приложения.
- *
- * Использует AppShell — обёртку «телефона» — который уже содержит
- * RouterView и BottomTabBar. Здесь только монтирование AppShell.
- */
-
+import { onMounted } from 'vue'
 import AppShell from '@/components/AppShell.vue'
+import { useFamilyStore } from '@/stores/family'
+
+const family = useFamilyStore()
+
+onMounted(() => {
+  // Как только приложение загрузилось — стучимся в Go и забираем данные
+  family.initFamilyData()
+})
 </script>
 
 <template>
