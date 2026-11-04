@@ -1,8 +1,16 @@
 /**
  * API-слой для запросов к Go-бэкенду.
+ *
+ * Когда фронтенд запущен локально (http://localhost:5173) — ходит на Go-сервер :8080.
+ * Когда открыт на GitHub Pages (https://...github.io) — fetch к localhost заблокирован
+ * браузером (private network access), поэтому включается ДЕМО-РЕЖИМ:
+ * все методы возвращают встроенные данные, UI остаётся полностью интерактивным.
  */
 
 import type { FamilyState, TransferRequest, TransferResponse, AgeGroup } from '@/types'
+
+/** Демо-режим: сайт работает не на localhost (GitHub Pages и т.п.). */
+const IS_DEMO = !window.location.hostname.includes('localhost')
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
@@ -71,10 +79,46 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 // ─── СУЩЕСТВУЮЩИЕ МЕТОДЫ ───
 
 export function fetchFamilyState(): Promise<FamilyState> {
+  if (IS_DEMO) {
+    return Promise.resolve({
+      parentBalance: 200,
+      childBalance: 85.5,
+      tasks: ['Помыть посуду', 'Сделать уроки'],
+      cards: [
+        {
+          id: 1,
+          title: 'Детская карта',
+          subtitle: 'Экономный',
+          balance: 85.5,
+          design: 'default',
+          maskedNumber: '2200 •••• •••• 4567',
+          isActive: true,
+          paymentSystem: 'VISA',
+        },
+      ],
+      children: [
+        {
+          id: 'child-1',
+          name: 'Миша',
+          age: 10,
+          initials: 'МП',
+          ageGroup: '7-13',
+          balance: 85.5,
+        },
+      ],
+    })
+  }
   return request<FamilyState>('/api/family/state')
 }
 
 export function transferMoney(amount: number): Promise<TransferResponse> {
+  if (IS_DEMO) {
+    return Promise.resolve({
+      parentBalance: 200 - amount,
+      childBalance: 85.5 + amount,
+      message: 'Перевод выполнен успешно',
+    })
+  }
   const body: TransferRequest = { amount }
   return request<TransferResponse>('/api/family/transfer', {
     method: 'POST',
@@ -86,6 +130,18 @@ export function transferMoney(amount: number): Promise<TransferResponse> {
 // ─── НОВЫЕ МЕТОДЫ (ДЛЯ ИНТЕГРАЦИИ С GO) ───
 
 export function addCardApi(design: string): Promise<ApiCard> {
+  if (IS_DEMO) {
+    return Promise.resolve({
+      id: Date.now(),
+      title: 'Детская карта',
+      subtitle: 'Экономный',
+      balance: 0,
+      design,
+      maskedNumber: '2200 •••• •••• 0000',
+      isActive: true,
+      paymentSystem: 'VISA',
+    })
+  }
   return request<ApiCard>('/api/family/card', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -94,6 +150,16 @@ export function addCardApi(design: string): Promise<ApiCard> {
 }
 
 export function addChildApi(data: { name: string; age: number; ageGroup: AgeGroup; initials: string }): Promise<ApiChild> {
+  if (IS_DEMO) {
+    return Promise.resolve({
+      id: `child-${Date.now()}`,
+      name: data.name,
+      age: data.age,
+      initials: data.initials,
+      ageGroup: data.ageGroup,
+      balance: 0,
+    })
+  }
   return request<ApiChild>('/api/family/child', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -102,21 +168,37 @@ export function addChildApi(data: { name: string; age: number; ageGroup: AgeGrou
 }
 
 export function sendMoneyRequestApi(amount: number, reason: string): Promise<ApiRequest> {
+  if (IS_DEMO) {
+    return Promise.resolve({
+      id: `req-${Date.now()}`,
+      amount,
+      reason,
+      status: 'pending',
+    })
+  }
   return request<ApiRequest>('/api/family/request', {
     method: 'POST',
-    headers: { 
+    headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer child-token' // Доступ ребенка
+      'Authorization': 'Bearer child-token', // Доступ ребенка
     },
     body: JSON.stringify({ amount, reason }),
   })
 }
 
 export function approveRequestApi(): Promise<ApiRequest> {
+  if (IS_DEMO) {
+    return Promise.resolve({
+      id: `req-${Date.now()}`,
+      amount: 0,
+      reason: '',
+      status: 'approved',
+    })
+  }
   return request<ApiRequest>('/api/family/request/approve', {
     method: 'POST',
-    headers: { 
-      'Authorization': 'Bearer parent-token' // Доступ родителя
+    headers: {
+      'Authorization': 'Bearer parent-token', // Доступ родителя
     },
   })
 }
