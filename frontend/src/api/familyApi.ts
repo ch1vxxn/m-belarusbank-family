@@ -81,17 +81,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export function fetchFamilyState(): Promise<FamilyState> {
   if (IS_DEMO) {
     return Promise.resolve({
-      parentBalance: 200,
-      childBalance: 85.5,
+      parentBalance: 2000,
+      childBalance: 30,
       tasks: ['Помыть посуду', 'Сделать уроки'],
       cards: [
         {
           id: 1,
-          title: 'Детская карта',
-          subtitle: 'Экономный',
-          balance: 85.5,
+          title: 'Карта 1',
+          subtitle: 'Экономный по 22.11.2026',
+          balance: 2000,
           design: 'default',
-          maskedNumber: '2200 •••• •••• 4567',
+          maskedNumber: '**** **** **** 9883',
           isActive: true,
           paymentSystem: 'VISA',
         },
@@ -103,7 +103,7 @@ export function fetchFamilyState(): Promise<FamilyState> {
           age: 10,
           initials: 'МП',
           ageGroup: '7-13',
-          balance: 85.5,
+          balance: 30,
         },
       ],
     })
@@ -114,8 +114,8 @@ export function fetchFamilyState(): Promise<FamilyState> {
 export function transferMoney(amount: number): Promise<TransferResponse> {
   if (IS_DEMO) {
     return Promise.resolve({
-      parentBalance: 200 - amount,
-      childBalance: 85.5 + amount,
+      parentBalance: 2000 - amount,
+      childBalance: 30 + amount,
       message: 'Перевод выполнен успешно',
     })
   }
