@@ -102,26 +102,26 @@ const showGrayBg = computed(() => {
     <!-- Сам телефон: белый днем, черный ночью -->
     <div class="relative flex h-full w-full flex-col overflow-hidden bg-white dark:bg-[#0A0A0A] text-black dark:text-white shadow-2xl shadow-black/10 dark:shadow-black/50 md:h-[844px] md:max-h-[90vh] md:w-[390px] md:rounded-[40px] md:border md:border-black/5 dark:md:border-white/[0.06] transition-colors duration-300">
       
-      <!-- ФОНОВЫЕ СЛОИ -->
+            <!-- ФОНОВЫЕ СЛОИ -->
       <div class="absolute inset-0 z-0 pointer-events-none">
         
-        <!-- СЛОЙ 1: Предыдущий градиент (плавно исчезает) -->
+        <!-- СЛОЙ 1: Предыдущий градиент -->
         <div 
           class="absolute inset-0 transition-opacity duration-700 ease-in-out"
           :class="showGrayBg ? 'opacity-0' : 'opacity-100'"
           :style="prevBgStyle"
         ></div>
 
-        <!-- СЛОЙ 2: Текущий градиент (плавно появляется поверх предыдущего) -->
+        <!-- СЛОЙ 2: Текущий градиент -->
         <div 
           class="absolute inset-0 transition-opacity duration-700 ease-in-out"
           :class="showGrayBg ? 'opacity-0' : 'opacity-100'"
           :style="currentBgStyle"
         ></div>
         
-        <!-- СЛОЙ 3: Серый фон для "Добавить карту" -->
+        <!-- СЛОЙ 3: Серый фон для "Добавить карту" (СДЕЛАЛИ СПЛОШНЫМ) -->
         <div 
-          class="absolute inset-0 transition-opacity duration-700 ease-in-out bg-[radial-gradient(circle_at_top,#F2F2F7_0%,#E5E5EA_30%,#FFFFFF_70%)] dark:bg-[radial-gradient(circle_at_top,#2C2C2E_0%,#1C1C1E_30%,#0A0A0A_70%)]"
+          class="absolute inset-0 transition-opacity duration-700 ease-in-out bg-[#F2F2F7] dark:bg-[#1C1C1E]"
           :class="showGrayBg ? 'opacity-100' : 'opacity-0'"
         ></div>
       </div>

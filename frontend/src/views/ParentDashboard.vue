@@ -33,8 +33,8 @@ const showDev = () => family.setNotice('error', 'Раздел в разрабо�
     <div class="relative z-10">
       <header class="flex items-center justify-between px-5 pt-8 pb-4">
         <div class="w-8"></div>
-        <h1 class="text-[17px] font-semibold tracking-wide">M-Belarusbank</h1>
-        <RouterLink to="/notifications" class="text-black dark:text-white relative">
+        <h1 class="text-[17px] font-semibold text-white tracking-wide">M-Belarusbank</h1>
+        <RouterLink to="/notifications" class="text-white relative">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
           <span v-if="family.notifications.some(n => !n.isRead)" class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
         </RouterLink>
@@ -45,8 +45,8 @@ const showDev = () => family.setNotice('error', 'Раздел в разрабо�
       <main class="px-5 space-y-5 pt-2">
         <section>
           <div class="flex justify-between items-center mb-2">
-            <h2 class="text-[15px] font-semibold">Карты</h2>
-            <button @click="showDev" class="text-[13px] text-black/60 dark:text-white/80 flex items-center gap-1">Все <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+            <h2 class="text-[15px] text-white font-semibold">Карты</h2>
+            <button @click="showDev" class="text-[13px] text-black/60 dark:text-white/80 text-white flex items-center gap-1">Все <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
           </div>
 
           <div class="flex overflow-x-auto snap-x snap-mandatory gap-4 scrollbar-hide -mx-5 px-5 pb-4" @scroll="handleScroll">
@@ -81,7 +81,7 @@ const showDev = () => family.setNotice('error', 'Раздел в разрабо�
               <ChildAvatar :initials="family.child.initials as string" :size="48" />
               <div>
                 <p class="text-[15px] font-medium">Моя семья</p>
-                <p class="text-[13px] text-black/50 dark:text-white/50">{{ family.child.name as string }}, {{ family.child.age }} лет</p>
+                <p class="text-[13px] text-black/50 dark:text-white/50">{{ family.child?.name as string }}, {{ family.child?.age }} лет</p>
               </div>
             </div>
             <ChevronRight class="w-5 h-5 text-black/40 dark:text-white/40" />

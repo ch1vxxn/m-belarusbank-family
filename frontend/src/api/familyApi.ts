@@ -1,22 +1,12 @@
 /**
  * API-слой для запросов к Go-бэкенду.
- *
- * Один файл с функциями вместо axios — проект маленький, а fetch
- * уже встроен в браузер. Здесь же живёт адрес бэкенда и разбор ошибок,
- * чтобы компоненты и store не знали деталей сети.
  */
 
-import type { FamilyState, TransferRequest, TransferResponse } from '@/types'
+import type { FamilyState, TransferRequest, TransferResponse, AgeGroup } from '@/types'
 
-/**
- * Адрес Go-сервера. Через env-переменную можно переопределить
- * без правки кода, например: VITE_API_BASE_URL=http://localhost:9000
- */
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
-/** Понятная человеку ошибка запроса, показывается прямо в интерфейсе. */
 export class ApiError extends Error {
-  /** HTTP-статус ответа, если сервер ответил (400, 422, 500...). */
   status: number | null
 
   constructor(message: string, status: number | null = null) {
@@ -26,30 +16,51 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Базовая обёртка над fetch: превращает любую ошибку сети
- * или HTTP-статус в понятное сообщение (ApiError).
- */
+// ─── ТИПЫ ДЛЯ ОТВЕТОВ ОТ GO ───
+export interface ApiCard {
+  id: number
+  title: string
+  subtitle: string
+  balance: number
+  design: string
+  maskedNumber: string
+  isActive: boolean
+  paymentSystem: 'VISA' | 'Mastercard'
+}
+
+export interface ApiChild {
+  id: string
+  name: string
+  age: number
+  initials: string
+  ageGroup: AgeGroup
+  balance: number
+}
+
+export interface ApiRequest {
+  id: string
+  amount: number
+  reason: string
+  status: string
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${API_BASE_URL}${path}`, init)
   } catch {
-    // Браузер не дозвонился до сервера (сервер не запущен, CORS и т.п.)
     throw new ApiError(
       'Не удалось связаться с сервером. Проверьте, запущен ли бэкенд на :8080',
     )
   }
 
   if (!response.ok) {
-    // Пытаемся достать текст ошибки из JSON-тела {"error": "..."},
-    // иначе показываем стандартное сообщение по статусу.
     let message = `Сервер вернул ошибку (${response.status})`
     try {
       const body = (await response.json()) as { error?: string }
       if (body.error) message = body.error
     } catch {
-      // тело не JSON — оставляем стандартное сообщение
+      // ignore
     }
     throw new ApiError(message, response.status)
   }
@@ -57,18 +68,55 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
-/** Получить текущее состояние семьи (балансы + задачи). */
+// ─── СУЩЕСТВУЮЩИЕ МЕТОДЫ ───
+
 export function fetchFamilyState(): Promise<FamilyState> {
   return request<FamilyState>('/api/family/state')
 }
 
-/** Перевести сумму от родителя к ребёнку. */
 export function transferMoney(amount: number): Promise<TransferResponse> {
   const body: TransferRequest = { amount }
-
   return request<TransferResponse>('/api/family/transfer', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+  })
+}
+
+// ─── НОВЫЕ МЕТОДЫ (ДЛЯ ИНТЕГРАЦИИ С GO) ───
+
+export function addCardApi(design: string): Promise<ApiCard> {
+  return request<ApiCard>('/api/family/card', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ design }),
+  })
+}
+
+export function addChildApi(data: { name: string; age: number; ageGroup: AgeGroup; initials: string }): Promise<ApiChild> {
+  return request<ApiChild>('/api/family/child', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export function sendMoneyRequestApi(amount: number, reason: string): Promise<ApiRequest> {
+  return request<ApiRequest>('/api/family/request', {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer child-token' // Доступ ребенка
+    },
+    body: JSON.stringify({ amount, reason }),
+  })
+}
+
+export function approveRequestApi(): Promise<ApiRequest> {
+  return request<ApiRequest>('/api/family/request/approve', {
+    method: 'POST',
+    headers: { 
+      'Authorization': 'Bearer parent-token' // Доступ родителя
+    },
   })
 }
