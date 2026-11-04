@@ -14,6 +14,7 @@ export default defineConfig({
     tailwindcss(),
 
   ],
+  base: '/m-belarusbank-family/',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
