@@ -108,8 +108,8 @@ export interface GoalContribution {
   id: string
   date: string
   amount: number
-  /** Откуда пришли деньги: parent = родитель, child = из карманных, chore = выполнил задание */
-  source: 'parent' | 'child' | 'chore'
+  /** Откуда пришли деньги: parent = родитель, chore = выполнил задание */
+  source: 'parent' | 'chore'
   sourceLabel: string
 }
 
@@ -157,8 +157,6 @@ export interface ServerChild {
   initials: string
   ageGroup: AgeGroup
   balance: number
-  /** Детская карта (может отсутствовать, если ещё не создана) */
-  card?: Partial<ChildCard>
 }
 
 export interface FamilyState {
