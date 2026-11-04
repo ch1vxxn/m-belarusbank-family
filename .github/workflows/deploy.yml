@@ -1,0 +1,57 @@
+# Деплой Vue-фронтенда (frontend/) на GitHub Pages.
+#
+# Работает по push в main (или вручную через Actions tab):
+# 1. Устанавливает Node 22
+# 2. Собирает frontend/ (npm ci && npm run build)
+# 3. Публикует содержимое frontend/dist в ветку gh-pages
+#
+# ВАЖНО: этот workflow перезапишет остатки старой гибридной ветки gh-pages
+# чистой сборкой, поэтому проблема «файлы в frontend/ + в корне» исчезнет.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # кнопка «Run workflow» в Actions
+
+# Даём GitHub Actions право писать в ветку gh-pages
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# Разрешаем один деплой за раз
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/dist
+          force_orphan: true # создаём чистую ветку gh-pages без мусора из истории
