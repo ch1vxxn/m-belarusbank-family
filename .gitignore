@@ -1,0 +1,11 @@
+# Go build artifacts
+backend/backend.exe
+backend/backend
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
