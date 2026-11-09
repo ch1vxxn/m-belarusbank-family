@@ -4,6 +4,19 @@ import { useRouter } from 'vue-router'
 import { useFamilyStore } from '@/stores/family'
 import { ChevronLeft, Plus, ShieldCheck } from 'lucide-vue-next'
 
+// ── ФОНЫ ДЕТСКИХ КАРТ ──
+import cardEmerald from '@/assets/cards/emerald.png'
+import cardGlass from '@/assets/cards/hare.jpg'
+import cardSunset from '@/assets/cards/deer.PNG'
+import cardSky from '@/assets/cards/stork.PNG'
+
+const cardBackgrounds: Record<string, string> = {
+  emerald: cardEmerald,
+  glass: cardGlass,
+  sunset: cardSunset,
+  sky: cardSky,
+}
+
 const router = useRouter()
 const family = useFamilyStore()
 
@@ -75,8 +88,10 @@ onMounted(() => {
           v-for="(c, index) in family.children" 
           :key="c.id" 
           @click="family.activeChildIndex = index; router.push('/child')"
-          class="relative overflow-hidden rounded-2xl p-4 text-white shadow-lg cursor-pointer bg-gradient-to-br from-[#006837] via-[#00A651] to-[#005226]"
+          class="relative overflow-hidden rounded-2xl p-4 text-white shadow-lg cursor-pointer"
+          :style="{ backgroundImage: `url(${cardBackgrounds[family.cardDesign] || cardEmerald})`, backgroundSize: 'cover', backgroundPosition: 'center' }"
         >
+          <div class="absolute inset-0 bg-black/30"></div>
           <div class="flex justify-between items-start mb-4">
             <p class="text-[11px] font-medium text-white/70">M-Belarusbank Family</p>
             <div class="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">

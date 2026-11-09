@@ -5,6 +5,19 @@ import { useFamilyStore } from '@/stores/family'
 import { ChevronLeft, ArrowUpRight, Plus } from 'lucide-vue-next'
 import ToggleListItem from '@/components/ToggleListItem.vue'
 
+// ── ФОНЫ ДЕТСКИХ КАРТ ──
+import cardEmerald from '@/assets/cards/emerald.png'
+import cardGlass from '@/assets/cards/hare.jpg'
+import cardSunset from '@/assets/cards/deer.PNG'
+import cardSky from '@/assets/cards/stork.PNG'
+
+const cardBackgrounds: Record<string, string> = {
+  emerald: cardEmerald,
+  glass: cardGlass,
+  sunset: cardSunset,
+  sky: cardSky,
+}
+
 const router = useRouter()
 const family = useFamilyStore()
 
@@ -117,12 +130,12 @@ const categoriesStats = computed(() => {
       <!-- Карта -->
       <div
         class="relative overflow-hidden rounded-[22px] p-5 text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)] mb-6 transition-all duration-500"
-        :class="
-          family.card?.isActive
-            ? 'bg-gradient-to-br from-[#006837] via-[#00A651] to-[#005226]'
-            : 'bg-[#2C2C2E] dark:bg-[#1C1C1E] grayscale'
-        "
+        :style="family.card?.isActive
+          ? { backgroundImage: `url(${cardBackgrounds[family.cardDesign] || cardEmerald})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+          : { background: '#2C2C2E' }"
+        :class="{ 'grayscale': !family.card?.isActive }"
       >
+        <div v-if="family.card?.isActive" class="absolute inset-0 bg-black/30"></div>
         <div class="relative z-10">
           <div class="flex justify-between items-start mb-6">
             <p class="text-[13px] font-medium text-white/90">M-Belarusbank Family</p>

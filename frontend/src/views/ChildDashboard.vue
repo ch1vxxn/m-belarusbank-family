@@ -11,6 +11,19 @@ import {
 } from 'lucide-vue-next'
 import { BrowserQRCodeReader, type IScannerControls } from '@zxing/browser'
 
+// ── ИМПОРТ ДИЗАЙНОВ ДЕТСКИХ КАРТ ──
+import cardEmerald from '@/assets/cards/emerald.png'
+import cardGlass from '@/assets/cards/hare.jpg'
+import cardSunset from '@/assets/cards/deer.PNG'
+import cardSky from '@/assets/cards/stork.PNG'
+
+const cardBackgrounds: Record<string, string> = {
+  emerald: cardEmerald,
+  glass: cardGlass,
+  sunset: cardSunset,
+  sky: cardSky,
+}
+
 // ── ТИПЫ ──
 interface QuizOption {
   text: string
@@ -406,7 +419,9 @@ function iconByName(name: string) {
     <main class="px-5 pb-24 overflow-y-auto">
       <!-- ═══════════════ ВКЛАДКА: ГЛАВНАЯ ═══════════════ -->
       <div v-if="activeTab === 'home'" class="space-y-5 pt-2">
-        <div class="relative overflow-hidden rounded-3xl p-6 shadow-lg bg-gradient-to-br from-[#006837] to-[#00A651] text-white">
+        <div class="relative overflow-hidden rounded-3xl p-6 shadow-lg text-white"
+          :style="{ backgroundImage: `url(${cardBackgrounds[family.cardDesign] || cardEmerald})`, backgroundSize: 'cover', backgroundPosition: 'center' }">
+          <div class="absolute inset-0 bg-black/30"></div>
           <div class="relative z-10">
             <div class="flex justify-between items-start mb-6">
               <p class="text-[13px] font-medium text-white/80">M-Belarusbank</p>
@@ -639,10 +654,10 @@ function iconByName(name: string) {
         </div>
 
         <!-- Карта (привязана к isActive) -->
-        <div class="relative overflow-hidden rounded-3xl p-6 shadow-lg transition-all duration-500"
-          :class="family.card?.isActive
-            ? 'bg-gradient-to-br from-[#006837] to-[#00A651] text-white'
-            : 'bg-gray-400 dark:bg-gray-600 text-white grayscale opacity-50'">
+        <div class="relative overflow-hidden rounded-3xl p-6 shadow-lg transition-all duration-500 text-white"
+          :class="family.card?.isActive ? '' : 'grayscale opacity-50'"
+          :style="family.card?.isActive ? { backgroundImage: `url(${cardBackgrounds[family.cardDesign] || cardEmerald})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: '#6B7280' }">
+          <div v-if="family.card?.isActive" class="absolute inset-0 bg-black/30"></div>
           <div v-if="!family.card?.isActive"
             class="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded z-10">
             Заблокирована
