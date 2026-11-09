@@ -115,14 +115,36 @@ const pendingRequests = computed(() => family.notifications.filter(n => n.type =
 // ── SOS ──
 const isSosModalOpen = ref(false)
 
+function handleSosLostCard() {
+  family.toggleCardActive()
+  isSosModalOpen.value = false
+  family.setNotice('success', 'Карта заблокирована')
+}
+
 // ── ДИЗАЙН КАРТЫ ──
 const isDesignModalOpen = ref(false)
+const selectedDesign = ref('emerald')
 const cardDesigns = [
   { id: 'emerald', label: 'Изумруд', gradient: 'linear-gradient(135deg, #006837, #00A651)' },
   { id: 'sunset', label: 'Закат', gradient: 'linear-gradient(135deg, #FF512F, #DD2476)' },
   { id: 'sky', label: 'Небо', gradient: 'linear-gradient(135deg, #2193b0, #6dd5ed)' },
   { id: 'glass', label: 'Стекло', gradient: 'linear-gradient(135deg, #8E9EAB, #EEF2F3)' },
 ]
+
+function sendDesignRequest() {
+  family.notifications.unshift({
+    id: `req-${Date.now()}`,
+    title: `Запрос от ${family.child?.name}`,
+    message: `Хочу дизайн карты: ${selectedDesign.value}`,
+    type: 'request',
+    isRead: false,
+    time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+    payload: { kind: 'permission', key: 'design' },
+  })
+  isDesignModalOpen.value = false
+  selectedDesign.value = 'emerald'
+  family.setNotice('success', 'Запрос на дизайн отправлен!')
+}
 
 // ── ТРАТЫ ──
 const monthlyExpenses = computed(() => {
@@ -289,27 +311,65 @@ function selectAnswer(index: number) {
   }, 800)
 }
 
-// ── КОПИЛКА ──
+// ── КОПИЛКИ (Список целей) ──
+interface GoalItem {
+  title: string
+  icon: string
+  current: number
+  target: number
+  createdAt: string
+}
+
+const savingsGoals = ref<GoalItem[]>([])
+
+function initGoals() {
+  savingsGoals.value = [
+    {
+      title: family.savingsGoal.title,
+      icon: family.savingsGoal.icon,
+      current: family.savingsGoal.current,
+      target: family.savingsGoal.target,
+      createdAt: family.savingsGoal.createdAt,
+    },
+  ]
+}
+
+initGoals()
+
 const isNewGoalModalOpen = ref(false)
 const newGoalTitle = ref('')
 const newGoalTarget = ref(100)
 
 const isSavingsDepositOpen = ref(false)
+const savingsDepositGoalIndex = ref(0)
 const depositAmount = ref(10)
 
 function createGoal() {
   if (!newGoalTitle.value.trim()) return
-  family.savingsGoal.title = newGoalTitle.value.trim()
-  family.savingsGoal.current = 0
-  family.savingsGoal.target = newGoalTarget.value
+  savingsGoals.value.push({
+    title: newGoalTitle.value.trim(),
+    icon: '🎯',
+    current: 0,
+    target: newGoalTarget.value,
+    createdAt: new Date().toISOString().slice(0, 10),
+  })
   newGoalTitle.value = ''
   newGoalTarget.value = 100
   isNewGoalModalOpen.value = false
 }
 
+function openSavingsDeposit(index: number) {
+  savingsDepositGoalIndex.value = index
+  depositAmount.value = 10
+  isSavingsDepositOpen.value = true
+}
+
 function depositToGoal() {
   if (depositAmount.value <= 0 || depositAmount.value > family.childBalance) return
-  family.depositToGoal(depositAmount.value)
+  const goal = savingsGoals.value[savingsDepositGoalIndex.value]
+  if (!goal) return
+  family.childBalance -= depositAmount.value
+  goal.current += depositAmount.value
   depositAmount.value = 10
   isSavingsDepositOpen.value = false
 }
@@ -492,22 +552,24 @@ function iconByName(name: string) {
           </button>
         </div>
 
-        <div class="rounded-2xl p-5 bg-white dark:bg-[#1C1C1E] shadow-sm border border-black/5 dark:border-white/5">
+        <div v-for="(goal, gi) in savingsGoals" :key="goal.createdAt"
+          class="rounded-2xl p-5 bg-white dark:bg-[#1C1C1E] shadow-sm border border-black/5 dark:border-white/5">
           <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-full bg-[#00A651]/10 flex items-center justify-center text-2xl">{{ family.savingsGoal.icon }}</div>
+              <div class="w-12 h-12 rounded-full bg-[#00A651]/10 flex items-center justify-center text-2xl">{{ goal.icon }}</div>
               <div>
-                <p class="text-[15px] font-bold">{{ family.savingsGoal.title }}</p>
-                <p class="text-[13px] text-gray-500 dark:text-gray-400">{{ family.savingsGoal.current.toFixed(2) }} BYN из {{ family.savingsGoal.target.toFixed(2) }} BYN</p>
+                <p class="text-[15px] font-bold">{{ goal.title }}</p>
+                <p class="text-[13px] text-gray-500 dark:text-gray-400">{{ goal.current.toFixed(2) }} BYN из {{ goal.target.toFixed(2) }} BYN</p>
               </div>
             </div>
           </div>
           <div class="w-full rounded-full h-2.5 bg-gray-100 dark:bg-[#2C2C2E] mb-3">
-            <div class="bg-[#00A651] h-2.5 rounded-full transition-all duration-500" :style="{ width: family.goalProgress + '%' }"></div>
+            <div class="bg-[#00A651] h-2.5 rounded-full transition-all duration-500"
+              :style="{ width: Math.min(100, (goal.current / goal.target) * 100) + '%' }"></div>
           </div>
           <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
             <span class="flex items-center gap-1 text-[13px] text-red-500"><Heart class="w-4 h-4 fill-red-500" /> Родитель +30%</span>
-            <button @click="isSavingsDepositOpen = true" class="text-[13px] text-[#00A651] font-medium hover:underline">Сдача сюда</button>
+            <button @click="openSavingsDeposit(gi)" class="text-[13px] text-[#00A651] font-medium hover:underline">Сдача сюда</button>
           </div>
         </div>
       </div>
@@ -574,6 +636,30 @@ function iconByName(name: string) {
             <span class="text-[13px] font-semibold">SOS</span>
             <span class="text-[12px] text-center text-gray-500 dark:text-gray-400">Мне нужна помощь</span>
           </button>
+        </div>
+
+        <!-- Карта (привязана к isActive) -->
+        <div class="relative overflow-hidden rounded-3xl p-6 shadow-lg transition-all duration-500"
+          :class="family.card?.isActive
+            ? 'bg-gradient-to-br from-[#006837] to-[#00A651] text-white'
+            : 'bg-gray-400 dark:bg-gray-600 text-white grayscale opacity-50'">
+          <div v-if="!family.card?.isActive"
+            class="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded z-10">
+            Заблокирована
+          </div>
+          <div class="relative z-10">
+            <div class="flex justify-between items-start mb-6">
+              <p class="text-[13px] font-medium text-white/80">M-Belarusbank</p>
+              <svg class="w-6 h-6 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+              </svg>
+            </div>
+            <p class="text-[28px] font-bold mb-1">{{ family.childBalanceFormatted }}</p>
+            <div class="flex justify-between items-end mt-4">
+              <p class="text-[14px] font-medium text-white/90">{{ family.child?.name || 'Ребёнок' }}</p>
+              <p class="text-[13px] font-mono text-white/70">•••• {{ family.card?.maskedNumber.slice(-4) }}</p>
+            </div>
+          </div>
         </div>
 
         <button @click="isDesignModalOpen = true" class="w-full rounded-xl py-3.5 text-center text-[14px] font-semibold bg-white dark:bg-[#1C1C1E] shadow-sm border border-black/5 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-[#2C2C2E] transition-colors">
@@ -683,7 +769,7 @@ function iconByName(name: string) {
         <h3 class="text-[20px] font-bold mb-1">Что случилось?</h3>
         <p class="text-[13px] text-gray-500 dark:text-gray-400 mb-6">Выберите ситуацию</p>
         <div class="space-y-3">
-          <button class="w-full rounded-2xl p-4 text-left text-[15px] font-medium bg-gray-50 dark:bg-[#2C2C2E] hover:bg-gray-100 dark:hover:bg-[#3C3C3E] transition-colors border border-gray-100 dark:border-gray-700">
+          <button @click="handleSosLostCard" class="w-full rounded-2xl p-4 text-left text-[15px] font-medium bg-gray-50 dark:bg-[#2C2C2E] hover:bg-gray-100 dark:hover:bg-[#3C3C3E] transition-colors border border-gray-100 dark:border-gray-700">
             Потерял карту
           </button>
           <button class="w-full rounded-2xl p-4 text-left text-[15px] font-medium bg-gray-50 dark:bg-[#2C2C2E] hover:bg-gray-100 dark:hover:bg-[#3C3C3E] transition-colors border border-gray-100 dark:border-gray-700">
@@ -708,12 +794,14 @@ function iconByName(name: string) {
         </div>
         <div class="grid grid-cols-2 gap-3 mb-6">
           <button v-for="d in cardDesigns" :key="d.id"
+            @click="selectedDesign = d.id"
             class="rounded-2xl h-24 flex items-center justify-center text-white text-[13px] font-semibold shadow-sm hover:scale-[1.02] transition-transform"
+            :class="selectedDesign === d.id ? 'ring-4 ring-[#00A651] ring-offset-2 dark:ring-offset-[#1C1C1E]' : ''"
             :style="{ background: d.gradient }">
             {{ d.label }}
           </button>
         </div>
-        <button class="w-full bg-[#00A651] text-white py-4 rounded-xl font-semibold hover:bg-[#009448] transition-colors">
+        <button @click="sendDesignRequest" class="w-full bg-[#00A651] text-white py-4 rounded-xl font-semibold hover:bg-[#009448] transition-colors">
           Отправить маме
         </button>
       </div>
