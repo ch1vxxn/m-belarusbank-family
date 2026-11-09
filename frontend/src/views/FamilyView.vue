@@ -58,7 +58,7 @@ onMounted(() => {
       <div class="w-7"></div>
     </header>
 
-    <main class="px-5">
+    <main class="px-5 pb-24 overflow-y-auto">
       <!-- Табы с переезжающим индикатором -->
       <div class="relative flex bg-black/5 dark:bg-[#1C1C1E] p-1 rounded-2xl mb-6 mt-2 overflow-x-auto scrollbar-hide transition-colors">
         <div
@@ -83,7 +83,7 @@ onMounted(() => {
       </div>
 
       <!-- ТАБ: ДЕТИ -->
-      <div v-if="activeTab === 'children'" class="space-y-4">
+      <div v-if="activeTab === 'children'" class="space-y-5 pt-2">
         <div 
           v-for="(c, index) in family.children" 
           :key="c.id" 
@@ -93,7 +93,7 @@ onMounted(() => {
         >
           <div class="absolute inset-0 bg-black/30"></div>
           <div class="flex justify-between items-start mb-4">
-            <p class="text-[11px] font-medium text-white/70">M-Belarusbank Family</p>
+            <p class="text-[11px] font-medium text-white">M-Belarusbank Family</p>
             <div class="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
               <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
@@ -103,13 +103,13 @@ onMounted(() => {
 
           <h2 class="text-lg font-bold mb-2">{{ c.name }}</h2>
           <div class="mb-4">
-            <p class="text-[11px] text-white/70">На карте</p>
+            <p class="text-[11px] text-white">На карте</p>
             <p class="text-2xl font-bold mt-0.5">{{ c.balance.toFixed(2) }} BYN</p>
           </div>
 
           <div class="flex justify-between items-end">
-            <p class="text-[12px] text-white/70 font-mono">•• {{ c.card.maskedNumber.slice(-4) }}</p>
-            <p class="text-[10px] text-white/60">
+            <p class="text-[12px] text-white font-mono">•• {{ c.card.maskedNumber.slice(-4) }}</p>
+            <p class="text-[10px] text-white">
               {{ c.age }} лет • {{ c.ageGroup === '14-17' ? '14–17' : '7–13' }} лет
             </p>
           </div>
