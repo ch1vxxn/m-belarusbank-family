@@ -1,0 +1,1 @@
+var e=`/m-belarusbank-family/assets/emerald-DGmoz3jJ.png`,t=`/m-belarusbank-family/assets/hare-TPl-Z1hF.png`,n=`/m-belarusbank-family/assets/deer-BEiBmkfF.png`,r=`/m-belarusbank-family/assets/stork-DN0uzjg6.png`;export{e as i,n,t as r,r as t};
