@@ -13,9 +13,9 @@ import { BrowserQRCodeReader, type IScannerControls } from '@zxing/browser'
 
 // ── ИМПОРТ ДИЗАЙНОВ ДЕТСКИХ КАРТ ──
 import cardEmerald from '@/assets/cards/emerald.png'
-import cardGlass from '@/assets/cards/hare.jpg'
-import cardSunset from '@/assets/cards/deer.PNG'
-import cardSky from '@/assets/cards/stork.PNG'
+import cardGlass from '@/assets/cards/hare.png'
+import cardSunset from '@/assets/cards/deer.png'
+import cardSky from '@/assets/cards/stork.png'
 
 const cardBackgrounds: Record<string, string> = {
   emerald: cardEmerald,
@@ -145,18 +145,19 @@ const cardDesigns = [
 ]
 
 function sendDesignRequest() {
+  const design = selectedDesign.value as 'emerald' | 'sunset' | 'sky' | 'glass'
+
   family.notifications.unshift({
     id: `req-${Date.now()}`,
     title: `Запрос от ${family.child?.name}`,
-    message: `Хочу дизайн карты: ${selectedDesign.value}`,
+    message: `Хочу дизайн карты: ${design}`,
     type: 'request',
     isRead: false,
     time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
-    payload: { kind: 'permission', key: 'design' },
+    payload: { kind: 'permission', key: 'design', design },
   })
   isDesignModalOpen.value = false
-  selectedDesign.value = 'emerald'
-  family.setNotice('success', 'Запрос на дизайн отправлен!')
+  family.setNotice('success', `Запрос на дизайн «${design}» отправлен маме!`)
 }
 
 // ── ТРАТЫ ──

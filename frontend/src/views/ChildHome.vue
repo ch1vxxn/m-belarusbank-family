@@ -7,9 +7,9 @@ import ToggleListItem from '@/components/ToggleListItem.vue'
 
 // ── ФОНЫ ДЕТСКИХ КАРТ ──
 import cardEmerald from '@/assets/cards/emerald.png'
-import cardGlass from '@/assets/cards/hare.jpg'
-import cardSunset from '@/assets/cards/deer.PNG'
-import cardSky from '@/assets/cards/stork.PNG'
+import cardGlass from '@/assets/cards/hare.png'
+import cardSunset from '@/assets/cards/deer.png'
+import cardSky from '@/assets/cards/stork.png'
 
 const cardBackgrounds: Record<string, string> = {
   emerald: cardEmerald,
@@ -126,35 +126,33 @@ const categoriesStats = computed(() => {
       <div class="w-7"></div>
     </header>
 
-    <main class="px-5 mt-2">
-      <!-- Карта -->
+    <main class="px-5 pb-24 overflow-y-auto">
+            <!-- Карта -->
       <div
-        class="relative overflow-hidden rounded-[22px] p-5 text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)] mb-6 transition-all duration-500"
+        class="relative overflow-hidden rounded-3xl p-6 text-white shadow-lg mb-6 transition-all duration-500"
         :style="family.card?.isActive
           ? { backgroundImage: `url(${cardBackgrounds[family.cardDesign] || cardEmerald})`, backgroundSize: 'cover', backgroundPosition: 'center' }
           : { background: '#2C2C2E' }"
         :class="{ 'grayscale': !family.card?.isActive }"
       >
         <div v-if="family.card?.isActive" class="absolute inset-0 bg-black/30"></div>
+        
         <div class="relative z-10">
           <div class="flex justify-between items-start mb-6">
-            <p class="text-[13px] font-medium text-white/90">M-Belarusbank Family</p>
-            <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
-              </svg>
-            </div>
+            <!-- Поменял на M-Belarusbank (как на главной) -->
+            <p class="text-[13px] font-medium text-white/80">M-Belarusbank</p>
+            <svg class="w-6 h-6 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
+            </svg>
           </div>
-          <h2 class="text-2xl font-bold mb-4">{{ family.child?.name || 'Ребёнок' }}</h2>
-          <div class="mb-6">
-            <p class="text-[12px] text-white/70">На карте</p>
-            <p class="text-3xl font-bold mt-0.5">{{ family.childBalanceFormatted }}</p>
-          </div>
-          <div class="flex justify-between items-end">
-            <p class="text-[13px] text-white/80 font-mono">•• {{ family.card?.maskedNumber.slice(-4) || '0000' }}</p>
-            <p class="text-[11px] text-white/70">
-              {{ family.child?.age || 10 }} лет • {{ family.child?.ageGroup === '14-17' ? '14–17' : '7–13' }} лет
-            </p>
+          
+          <!-- Баланс теперь сверху и крупный (как на главной) -->
+          <p class="text-[28px] font-bold mb-1">{{ family.childBalanceFormatted }}</p>
+          
+          <!-- Имя и номер карты снизу -->
+          <div class="flex justify-between items-end mt-4">
+            <p class="text-[14px] font-medium text-white/90">{{ family.child?.name || 'Ребёнок' }}</p>
+            <p class="text-[13px] font-mono text-white/70">•••• {{ family.card?.maskedNumber.slice(-4) || '0000' }}</p>
           </div>
         </div>
       </div>
