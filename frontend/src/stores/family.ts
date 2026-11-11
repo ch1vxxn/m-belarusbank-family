@@ -21,7 +21,7 @@ export interface Notification {
   time: string
   isRead: boolean
   type: 'request' | 'info'
-  payload?: { kind: 'money' | 'permission'; amount?: number; key?: string }
+  payload?: { kind: 'money' | 'permission'; amount?: number; key?: string; design?: string }
 }
 
 export const useFamilyStore = defineStore('family', () => {
@@ -236,6 +236,10 @@ export const useFamilyStore = defineStore('family', () => {
         childBalance.value += n.payload.amount
         pushTransaction('Одобрен запрос ребёнка', n.payload.amount)
         setNotice('success', 'Запрос одобрен')
+      }
+      if (n.payload.kind === 'permission' && n.payload.key === 'design' && n.payload.design) {
+        setCardDesign(n.payload.design as 'emerald' | 'sunset' | 'sky' | 'glass')
+        setNotice('success', `Дизайн «${n.payload.design}» утверждён`)
       }
     } else if (!approve) {
       setNotice('error', 'Запрос отклонён')

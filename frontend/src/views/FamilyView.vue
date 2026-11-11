@@ -6,9 +6,9 @@ import { ChevronLeft, Plus, ShieldCheck } from 'lucide-vue-next'
 
 // ── ФОНЫ ДЕТСКИХ КАРТ ──
 import cardEmerald from '@/assets/cards/emerald.png'
-import cardGlass from '@/assets/cards/hare.jpg'
-import cardSunset from '@/assets/cards/deer.PNG'
-import cardSky from '@/assets/cards/stork.PNG'
+import cardGlass from '@/assets/cards/hare.png'
+import cardSunset from '@/assets/cards/deer.png'
+import cardSky from '@/assets/cards/stork.png'
 
 const cardBackgrounds: Record<string, string> = {
   emerald: cardEmerald,
